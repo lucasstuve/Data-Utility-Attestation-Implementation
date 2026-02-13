@@ -1,0 +1,22 @@
+Program     = _{ SOI ~ Disjunction ~ ";"? ~ EOI }
+
+Disjunction = { Conjunction ~ (OR ~ Conjunction)* }
+Conjunction = { Pred ~ (AND ~ Pred)* }
+
+Pred        = { "(" ~ Term ~ Operator ~ Term ~ ")" }
+
+Term        = _{ Number | Bool | Str | Ident }
+
+OR          = _{ "OR" }
+AND         = _{ "AND" }
+
+Operator    = { "<=" | ">=" | "==" | "!=" | "<" | ">" }
+
+Number      = @{ ASCII_DIGIT+ }
+Bool        = { "true" | "false" }
+Str         = @{ "\"" ~ ( "\\\"" | "\\\\" | !("\"") ~ ANY )* ~ "\"" }
+
+Ident       = @{ !Keyword ~ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+Keyword     = { "AND" | "OR" | "true" | "false" | "var" }
+
+WHITESPACE  = _{ " " | "\t" | "\r" | "\n" }
