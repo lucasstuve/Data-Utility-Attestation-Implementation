@@ -5,11 +5,13 @@ use pest::Parser;
 use pest_derive::Parser;
 
 #[derive(Parser)]
+#[grammar = "epl-dsl.pest"]
+#[grammar = "common.pest"]
 #[grammar = "dnf.pest"]
 pub struct DnfParser;
 
 pub fn parse_source(source: &str) -> Result<Vec<Disjunction>, pest::error::Error<Rule>> {
-    let pairs = DnfParser::parse(Rule::Program, source)?;
+    let pairs = DnfParser::parse(Rule::program, source)?;
     let mut ast: Vec<Disjunction> = Vec::new();
 
     for pair in pairs {
@@ -19,6 +21,10 @@ pub fn parse_source(source: &str) -> Result<Vec<Disjunction>, pest::error::Error
     }
 
     Ok(ast)
+}
+
+fn create_schema(pair: pest::interators::Pair<Rule>) -> Term {
+    return Term {};
 }
 
 fn build_term(pair: pest::iterators::Pair<Rule>) -> Term {

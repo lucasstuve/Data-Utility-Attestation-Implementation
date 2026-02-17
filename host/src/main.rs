@@ -4,14 +4,14 @@
 use dnf_core::ast::{Conjunction, Disjunction, Operator, Pred, Term};
 use methods::{EVAL_AST_ELF, EVAL_AST_ID};
 mod parser;
-use risc0_zkvm::{ExecutorEnv, default_prover};
+use risc0_zkvm::{default_prover, ExecutorEnv};
 
 fn main() {
     // Prepare AST based on source and pest parsing => Input for evaluation
 
     // As defined in the guest logic (secret DataValue set to 11 and OtherValue set true)
 
-    let source = r#"(DataValue == 9 ) AND (DataValue < 3) AND (OtherValue == false)  "#;
+    let source = r#"CREATE SCHEMA vehicle_data (speed u64, name string);"#;
     let dnf = parser::parse_source(&source);
 
     let ast = match dnf {

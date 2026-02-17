@@ -1,0 +1,10 @@
+
+WHITESPACE  = _{ " " | "\t" | "\r" | "\n" }
+Number      = @{ ASCII_DIGIT+ }
+Bool        = { "true" | "false" }
+Str         = @{ "\"" ~ ( "\\\"" | "\\\\" | !("\"") ~ ANY )* ~ "\"" }
+
+Ident       = @{ !Keyword ~ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+Keyword     = { "AND" | "OR" | "true" | "false" | "var" | "string" | "u64" | "i64" | "bool" | "schema" | "create" }
+Type = {"bool" | "u64" | "i64" | "string"}
