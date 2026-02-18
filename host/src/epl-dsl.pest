@@ -1,10 +1,10 @@
 program = {SOI ~ epl ~  EOI  }
 
-epl = _{schema | assert_rule }
+epl = _{schema ~ assert_rule }
 schema = {"CREATE" ~ "SCHEMA" ~ Ident ~ "("~ attribute_list? ~ ")" ~ ";"}
 
 attribute_list = {attribute ~ ("," ~ attribute)*}
 
-attribute = {Ident ~ Type}
+attribute = {Ident ~ Type} 
 
 assert_rule = {"assert" ~ Ident ~ "(" ~ dnf_statement ~ ")" ~ ";"}

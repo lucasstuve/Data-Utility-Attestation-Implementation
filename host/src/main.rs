@@ -2,6 +2,7 @@
 // The ELF is used for proving and the ID is used for verification.
 
 use dnf_core::ast::{Conjunction, Disjunction, Operator, Pred, Term};
+use dnf_core::epl::{AssertRule, Attribute, AttributeList, Itype, ProgramAst, Schema};
 use methods::{EVAL_AST_ELF, EVAL_AST_ID};
 mod parser;
 use risc0_zkvm::{default_prover, ExecutorEnv};
@@ -11,7 +12,7 @@ fn main() {
 
     // As defined in the guest logic (secret DataValue set to 11 and OtherValue set true)
 
-    let source = r#"CREATE SCHEMA vehicle_data (speed u64, name string);"#;
+    let source = r#"CREATE SCHEMA VehicleData (speed float, open bool); assert VehicleData((speed < 50) AND (open == false));"#;
     let dnf = parser::parse_source(&source);
 
     let ast = match dnf {
