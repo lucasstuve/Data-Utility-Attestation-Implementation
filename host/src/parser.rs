@@ -109,9 +109,9 @@ fn build_attribute(pair: pest::iterators::Pair<Rule>) -> Attribute {
     }
 }
 
-fn build_ident(pair: pest::iterators::Pair<Rule>) -> Term {
+fn build_ident(pair: pest::iterators::Pair<Rule>) -> String {
     match pair.as_rule() {
-        Rule::Ident => Term::Ident(pair.as_str().to_string()),
+        Rule::Ident => pair.as_str().to_string(),
         _ => unreachable!("Must be Identfier!"),
     }
 }

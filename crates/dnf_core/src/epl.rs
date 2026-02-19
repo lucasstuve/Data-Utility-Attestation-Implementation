@@ -15,7 +15,7 @@ pub struct ProgramAst {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Attribute {
-    pub ident: Term,
+    pub ident: String,
     pub i_type: Itype,
 }
 
@@ -26,12 +26,12 @@ pub struct AttributeList {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Schema {
-    pub ident: Term, // should be used as Ident
+    pub ident: String, // should be used as Ident
     pub attribute_list: AttributeList,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AssertRule {
-    pub ident: Term, // should be used as Ident
+    pub ident: String, // should be used as Ident
     pub rule: Vec<Disjunction>,
 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]

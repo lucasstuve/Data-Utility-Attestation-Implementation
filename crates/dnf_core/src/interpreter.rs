@@ -1,4 +1,5 @@
 use crate::ast::{Conjunction, Disjunction, Operator, Pred, Term};
+use crate::epl::{Itype, ProgramAst, Schema};
 //use std::collections::HashMap;
 
 extern crate alloc;
@@ -7,7 +8,40 @@ use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
 pub type Env = BTreeMap<String, Term>;
 
-pub fn eval_ast(dis: &Vec<Disjunction>, env: &Env) -> bool {
+pub struct Event {
+    pub data: Vec<Term>,
+}
+
+pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
+    let schema = &p.schemas[0];
+    // let rules = p.assert_rules;
+
+    let mut env: BTreeMap<String, Term> = BTreeMap::new();
+
+    for e in input {
+        env.extend(type_input(e, schema));
+    }
+
+    let mut result = true;
+
+    for r in &p.assert_rules {
+        result = result && eval_filter_dnf(&r.rule, &env);
+    }
+
+    result
+}
+
+pub fn type_input(e: Event, s: &Schema) -> BTreeMap<String, Term> {
+    let mut data_args: BTreeMap<String, Term> = BTreeMap::new();
+
+    for (idx, attr) in s.attribute_list.list.iter().enumerate() {
+        data_args.insert(attr.ident.clone(), e.data[idx].clone());
+    }
+
+    return data_args;
+}
+
+pub fn eval_filter_dnf(dis: &Vec<Disjunction>, env: &Env) -> bool {
     let mut result = false;
 
     for d in dis {
@@ -20,7 +54,7 @@ pub fn eval_ast(dis: &Vec<Disjunction>, env: &Env) -> bool {
 fn eval_disj(dis: &Disjunction, env: &Env) -> bool {
     let mut result = false;
     for c in &dis.conj {
-        result = result | eval_conj(&c, env);
+        result = result || eval_conj(&c, env);
     }
     return result;
 }

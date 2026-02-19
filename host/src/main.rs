@@ -12,7 +12,8 @@ fn main() {
 
     // As defined in the guest logic (secret DataValue set to 11 and OtherValue set true)
 
-    let source = r#"CREATE SCHEMA VehicleData (speed float, open bool); assert VehicleData((speed < 50) AND (open == false));"#;
+    let source = r#"CREATE SCHEMA VehicleData (speed float, open bool);
+                       assert VehicleData((speed < 6000) AND (open == true));"#;
     let dnf = parser::parse_source(&source);
 
     let ast = match dnf {
@@ -36,7 +37,7 @@ fn main() {
 
     // For example:
     let _output: bool = receipt.journal.decode().unwrap();
-    println!("The Result of the DNF is: {}", _output);
+    println!("The query result is: {}", _output);
 
     // The receipt was verified at the end of proving, but the below code is an
     // example of how someone else could verify this receipt.
