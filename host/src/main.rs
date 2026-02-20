@@ -12,11 +12,12 @@ fn main() {
 
     // As defined in the guest logic (secret DataValue set to 11 and OtherValue set true)
 
-    let source = r#"CREATE SCHEMA VehicleData (speed float, open bool);
-                       assert VehicleData((speed < 6000) AND (open == true));"#;
+    let source = r#"CREATE SCHEMA VehicleData (dataFieldName string, value int);
+                       assert VehicleData((value < 81) AND (dataFieldName == "profiles.targetSOCPercentage"));"#;
+
     let dnf = parser::parse_source(&source);
 
-    let ast = match dnf {
+    let ast: ProgramAst = match dnf {
         Err(e) => {
             print!("Error {}", e);
             return;

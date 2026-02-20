@@ -1,6 +1,6 @@
 #![allow(clippy::upper_case_acronyms, clippy::result_large_error)]
 
-use std::sync::mpsc::RecvTimeoutError;
+//use std::sync::mpsc::RecvTimeoutError;
 
 use dnf_core::ast::{Conjunction, Disjunction, Operator, Pred, Term};
 use dnf_core::epl::{AssertRule, Attribute, AttributeList, Itype, ProgramAst, Schema};

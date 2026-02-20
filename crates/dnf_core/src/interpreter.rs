@@ -8,6 +8,7 @@ use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
 pub type Env = BTreeMap<String, Term>;
 
+#[derive(Debug)]
 pub struct Event {
     pub data: Vec<Term>,
 }
