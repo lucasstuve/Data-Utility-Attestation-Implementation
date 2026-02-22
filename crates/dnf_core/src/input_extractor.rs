@@ -2,9 +2,9 @@ use crate::ast::Term;
 use crate::epl::{Attribute, AttributeList, Itype, Schema};
 use crate::interpreter::Event;
 extern crate alloc;
+use alloc::string::String;
+use alloc::vec::Vec;
 use serde_json::{Result, Value};
-
-use alloc::{string::String, vec::Vec};
 
 pub fn extract_events(schema: Schema, raw_event: &[u8]) -> Event {
     let json: Value = serde_json::from_slice(raw_event).unwrap();
@@ -20,8 +20,19 @@ pub fn extract_events(schema: Schema, raw_event: &[u8]) -> Event {
                     .unwrap();
                 Term::Bool(b)
             }
-            Itype::Float => Term::Number(json[&attr.ident].as_i64().unwrap()),
-            Itype::String => Term::Str(json[&attr.ident].as_str().unwrap().into()),
+            Itype::Float => {
+                let v = json.get(&attr.ident).unwrap();
+                let f = v
+                    .as_f64()
+                    .or_else(|| v.as_str().and_then(|s| s.parse::<f64>().ok()))
+                    .unwrap_or_else(|| panic!("float parsing failed!"));
+
+                Term::Number(f as i64)
+            }
+            Itype::String => {
+                let v = json.get(&attr.ident).unwrap();
+                Term::Str(v.as_str().unwrap().into())
+            }
             Itype::Int => {
                 let v = json.get(&attr.ident).unwrap();
                 let n = v
@@ -36,6 +47,13 @@ pub fn extract_events(schema: Schema, raw_event: &[u8]) -> Event {
     }
 
     return Event { data: event_data };
+}
+
+pub fn grap_event_string<'a>(indexes: (u32, u32), bytes: &'a [u8]) -> &'a str {
+    let (s, e) = indexes;
+    let s_usize: usize = s as usize;
+    let e_usize: usize = e as usize;
+    core::str::from_utf8(&bytes[s_usize..e_usize]).unwrap()
 }
 
 //TODO implement more efficient data extraction based on byte,string evaluation.

@@ -6,6 +6,7 @@ edition = "2021"
 [lib]
 path = "src/lib.rs"
 
+
 [dependencies]
 serde = { version = "1", default-features = false, features = [
     "derive",
@@ -13,3 +14,7 @@ serde = { version = "1", default-features = false, features = [
 ] }
 
 serde_json = { version = "1", default-features = false, features = ["alloc"] }
+
+[[bin]]
+name = "input_extractor"
+path = "src/bin/input_extractor.rs"
