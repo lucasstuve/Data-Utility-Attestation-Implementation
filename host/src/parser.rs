@@ -97,7 +97,13 @@ fn build_attribute(pair: pest::iterators::Pair<Rule>) -> Attribute {
         Rule::attribute => {
             let mut it = pair.into_inner();
             let ident = build_ident(it.next().unwrap());
-            let t: Itype = build_type(it.next().unwrap());
+            let mut t: Itype = build_type(it.next().unwrap());
+
+            /*   if ident.as_str() == "value" {
+                t = Itype::String;
+            };
+
+            */
 
             return Attribute {
                 i_type: t,

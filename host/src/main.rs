@@ -5,15 +5,26 @@ use dnf_core::ast::{Conjunction, Disjunction, Operator, Pred, Term};
 use dnf_core::epl::{AssertRule, Attribute, AttributeList, Itype, ProgramAst, Schema};
 use methods::{EVAL_AST_ELF, EVAL_AST_ID};
 mod parser;
+mod predata_processor;
 use risc0_zkvm::{default_prover, ExecutorEnv};
+use std::fs;
 
+use crate::predata_processor::create_events_indexes;
 fn main() {
     // Prepare AST based on source and pest parsing => Input for evaluation
 
+    let file_str = fs::read_to_string(r"/mnt/c/Users/Lucas/Desktop/dsl_example/dnf_example/dnf_pest_parser/evaluator_program/host/src/example_vw_event_data_small.json").unwrap();
+    let file_bytes = file_str.as_bytes();
+    let file_len: u32 = file_bytes.len().try_into().unwrap();
+
+    let index_list = create_events_indexes(file_str.as_str());
+
     // As defined in the guest logic (secret DataValue set to 11 and OtherValue set true)
 
+    // Example user defined query string, first defining the data extraction than ASSERT a rule.
+    // Note: the IDENTIFIER (e.g. dataFieldName) must exactly match the identifier used in the original JSON
     let source = r#"CREATE SCHEMA VehicleData (dataFieldName string, value int);
-                       assert VehicleData((value < 81) AND (dataFieldName == "profiles.targetSOCPercentage"));"#;
+                       assert VehicleData ((value < 30));"#;
 
     let dnf = parser::parse_source(&source);
 
@@ -29,18 +40,24 @@ fn main() {
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .init();
 
-    let env = ExecutorEnv::builder().write(&ast).unwrap().build().unwrap();
+    let env = ExecutorEnv::builder()
+        .write(&ast)
+        .unwrap()
+        .write(&file_len)
+        .unwrap()
+        .write_slice(file_bytes)
+        .write(&index_list)
+        .unwrap()
+        .build()
+        .unwrap();
     let prover = default_prover();
     let prove_info = prover.prove(env, EVAL_AST_ELF).unwrap();
     let receipt = prove_info.receipt;
 
-    // TODO: Implement code for retrieving receipt journal here.
-
-    // For example:
+    // Receive the boolean result and print it.
     let _output: bool = receipt.journal.decode().unwrap();
     println!("The query result is: {}", _output);
 
-    // The receipt was verified at the end of proving, but the below code is an
-    // example of how someone else could verify this receipt.
+    // verify the result, returned from the guest-side evaluation
     receipt.verify(EVAL_AST_ID).unwrap();
 }
