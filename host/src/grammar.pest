@@ -1,0 +1,26 @@
+
+WHITESPACE  = _{ " " | "\t" | "\r" | "\n" }
+
+Int = @{ "-"? ~ ASCII_DIGIT+ }
+Float = @{"-"? ~ ASCII_DIGIT+ !("." | "e" | "E")} 
+Bool        = { "true" | "false" }
+Str         = @{ "\"" ~ ( "\\\"" | "\\\\" | !("\"") ~ ANY )* ~ "\"" }
+
+
+Ident = @{ (ASCII_ALPHANUMERIC | "_") ~ (ASCII_ALPHANUMERIC | "_") * ~ ("." ~ (ASCII_ALPHANUMERIC | "_") ~ (ASCII_ALPHANUMERIC | "_")*)* }
+
+Keyword     = { "AND" | "OR" | "true" | "false" | "var" | "string" | "u64" | "i64" | "bool" | "schema" | "create" }
+Type = {"bool" | "float" | "int" | "string" }
+
+
+
+program = {SOI ~ epl ~  EOI  }
+
+epl = _{schema ~ assert_rule }
+schema = {"CREATE" ~ "SCHEMA" ~ Ident ~ "("~ attribute_list? ~ ")" ~ ";"}
+
+attribute_list = {attribute ~ ("," ~ attribute)*}
+
+attribute = {Ident ~ Type} 
+
+assert_rule = {"assert" ~ Ident ~ "(" ~ dnf_statement ~ ")" ~ ";"}

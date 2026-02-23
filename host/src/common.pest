@@ -1,11 +1,11 @@
-
 WHITESPACE  = _{ " " | "\t" | "\r" | "\n" }
-Number      = @{ "-"? ~ ASCII_DIGIT+ }
+Int = @{ "-"? ~ ASCII_DIGIT+ }
+Float = @{"-"? ~ ( ASCII_DIGIT+  ~ "." ~ ASCII_DIGIT+)} 
 Bool        = { "true" | "false" }
 Str         = @{ "\"" ~ ( "\\\"" | "\\\\" | !("\"") ~ ANY )* ~ "\"" }
 
 
-Ident = @{ (ASCII_ALPHANUMERIC | "_") ~ (ASCII_ALPHANUMERIC | "_") * ~ ("." ~ (ASCII_ALPHANUMERIC | "_") ~ (ASCII_ALPHANUMERIC | "_")*)* }
+Ident = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_") * ~ ("." ~ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")*)* }
 
 Keyword     = { "AND" | "OR" | "true" | "false" | "var" | "string" | "u64" | "i64" | "bool" | "schema" | "create" }
-Type = {"bool" | "float" | "int" | "string"}
+Type = {"bool" | "float" | "int" | "string" }

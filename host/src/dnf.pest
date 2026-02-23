@@ -2,9 +2,9 @@ dnf_statement = { Disjunction }
 
 Disjunction = { Conjunction ~ (OR ~ Conjunction)* }
 Conjunction = { Pred ~ (AND ~ Pred)* }
-Pred        = { "(" ~ Term ~ Operator ~ Term ~ ")" }
+Pred        = {   Term ~ Operator ~ Term  }
 
-Term        = _{ Number | Bool | Str | Ident }
+Term        = _{Float | Int | Bool | Str | Ident } 
 Operator    = { "<=" | ">=" | "==" | "!=" | "<" | ">" }
 
 OR          = _{ "OR" }

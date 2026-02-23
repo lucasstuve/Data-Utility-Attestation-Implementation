@@ -30,9 +30,10 @@ impl fmt::Display for Operator {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Term {
-    Number(i64),
+    Int(i64),
+    Float(f64),
     Bool(bool),
     Str(String),
     Ident(String),
@@ -47,28 +48,32 @@ impl Term {
         matches!((a, b), (Term::Str(_), Term::Str(_)))
     }
 
-    pub fn equal_term_number(a: &Term, b: &Term) -> bool {
-        matches!((a, b), (Term::Number(_), Term::Number(_)))
+    pub fn equal_term_int(a: &Term, b: &Term) -> bool {
+        matches!((a, b), (Term::Int(_), Term::Int(_)))
     }
 
     pub fn equal_term_ident(a: &Term, b: &Term) -> bool {
         matches!((a, b), (Term::Ident(_), Term::Ident(_)))
     }
+
+    pub fn equal_term_float(a: &Term, b: &Term) -> bool {
+        matches!((a, b), (Term::Float(_), Term::Float(_)))
+    }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Conjunction {
     pub preds: Vec<Pred>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Pred {
     pub lhs: Term,
     pub op: Operator,
     pub rhs: Term,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Disjunction {
     pub conj: Vec<Conjunction>,
 }

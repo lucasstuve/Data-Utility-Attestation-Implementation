@@ -8,9 +8,11 @@ use pest::Parser;
 use pest_derive::Parser;
 
 #[derive(Parser)]
+//#[grammar = "grammar.pest"]
 #[grammar = "epl-dsl.pest"]
 #[grammar = "common.pest"]
 #[grammar = "dnf.pest"]
+
 pub struct DnfParser;
 
 pub fn parse_source(source: &str) -> Result<ProgramAst, pest::error::Error<Rule>> {
@@ -136,8 +138,9 @@ fn build_type(pair: pest::iterators::Pair<Rule>) -> Itype {
 
 fn build_term(pair: pest::iterators::Pair<Rule>) -> Term {
     match pair.as_rule() {
-        Rule::Number => Term::Number(pair.as_str().parse().unwrap()),
+        Rule::Int => Term::Int(pair.as_str().parse().unwrap()),
         Rule::Bool => Term::Bool(pair.as_str() == "true"),
+        Rule::Float => Term::Float(pair.as_str().parse().unwrap()),
 
         // Assuming your grammar returns quoted strings like "hi"
         Rule::Str => {

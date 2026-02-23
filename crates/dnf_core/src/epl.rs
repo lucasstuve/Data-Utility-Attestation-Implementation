@@ -8,7 +8,7 @@ use alloc::{string::String, vec::Vec};
 use serde::{Deserialize, Serialize};
 
 //#[derive(Debug)]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProgramAst {
     pub schemas: Vec<Schema>,
     pub assert_rules: Vec<AssertRule>,
@@ -29,7 +29,7 @@ pub struct Schema {
     pub ident: String, // should be used as Ident
     pub attribute_list: AttributeList,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AssertRule {
     pub ident: String, // should be used as Ident
     pub rule: Vec<Disjunction>,

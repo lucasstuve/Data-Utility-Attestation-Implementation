@@ -27,7 +27,7 @@ pub fn extract_events(schema: Schema, raw_event: &[u8]) -> Event {
                     .or_else(|| v.as_str().and_then(|s| s.parse::<f64>().ok()))
                     .unwrap_or_else(|| panic!("float parsing failed!"));
 
-                Term::Number(f as i64)
+                Term::Float(f)
             }
             Itype::String => {
                 let v = json.get(&attr.ident).unwrap();
@@ -39,7 +39,7 @@ pub fn extract_events(schema: Schema, raw_event: &[u8]) -> Event {
                     .as_i64()
                     .or_else(|| v.as_str().and_then(|s| s.parse::<i64>().ok()))
                     .unwrap();
-                Term::Number(n)
+                Term::Int(n)
             }
         };
 

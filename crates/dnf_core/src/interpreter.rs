@@ -1,9 +1,6 @@
 use crate::ast::{Conjunction, Disjunction, Operator, Pred, Term};
-use crate::epl::{Itype, ProgramAst, Schema};
-//use std::collections::HashMap;
-
+use crate::epl::{ProgramAst, Schema};
 extern crate alloc;
-
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
 pub type Env = BTreeMap<String, Term>;
@@ -15,21 +12,18 @@ pub struct Event {
 
 pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
     let schema = &p.schemas[0];
-    // let rules = p.assert_rules;
 
-    let mut env: BTreeMap<String, Term> = BTreeMap::new();
-
-    for e in input {
-        env.extend(type_input(e, schema));
-    }
-
-    let mut result = true;
-
-    for r in &p.assert_rules {
-        result = result && eval_filter_dnf(&r.rule, &env);
-    }
-
-    result
+    p.assert_rules.iter().all(|r| {
+        input.iter().any(|e| {
+            let env = type_input(
+                Event {
+                    data: e.data.clone(),
+                },
+                schema,
+            );
+            eval_filter_dnf(&r.rule, &env)
+        })
+    })
 }
 
 pub fn type_input(e: Event, s: &Schema) -> BTreeMap<String, Term> {
@@ -88,7 +82,8 @@ fn eval_pred(p: &Pred, env: &Env) -> bool {
 
     match (lhs, rhs) {
         (Term::Bool(a), Term::Bool(b)) => operator_to_function::<bool>(p.op)(a, b),
-        (Term::Number(a), Term::Number(b)) => operator_to_function::<i64>(p.op)(a, b),
+        (Term::Int(a), Term::Int(b)) => operator_to_function::<i64>(p.op)(a, b),
+        (Term::Float(a), Term::Float(b)) => operator_to_function::<f64>(p.op)(a, b),
         (Term::Str(a), Term::Str(b)) => operator_to_function::<String>(p.op)(a, b),
 
         // Typmix (z.B. Number vs Str) => false (oder später Result/Error)
@@ -106,36 +101,6 @@ fn operator_to_function<T: PartialEq + PartialOrd>(op: Operator) -> fn(a: T, b: 
     }
 }
 
-//pub type Env = HashMap<&str, Term>;
-
-fn eval_bool(term: &Term) -> Option<bool> {
-    match term {
-        Term::Bool(b) => Some(*b),
-        _ => None,
-    }
-}
-
-fn eval_str<'a>(term: &'a Term) -> Option<&'a str> {
-    match term {
-        Term::Str(s) => Some(s),
-        _ => None,
-    }
-}
-
-fn eval_ident<'a>(term: &'a Term) -> Option<&'a str> {
-    match term {
-        Term::Ident(i) => Some(i),
-        _ => None,
-    }
-}
-
-fn eval_number(t: &Term) -> Option<i64> {
-    match t {
-        Term::Number(n) => Some(*n),
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -144,11 +109,11 @@ mod test {
     #[test]
     fn test_eval_pred_ident_number() {
         let mut env: Env = BTreeMap::new();
-        env.insert("MyValue".into(), Term::Number(11));
+        env.insert("MyValue".into(), Term::Int(11));
 
         let p = Pred {
             lhs: Term::Ident("MyValue".into()),
-            rhs: Term::Number(10),
+            rhs: Term::Int(10),
             op: Operator::Gr,
         };
 
