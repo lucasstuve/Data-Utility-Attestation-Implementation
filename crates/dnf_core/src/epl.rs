@@ -12,6 +12,12 @@ use serde::{Deserialize, Serialize};
 pub struct ProgramAst {
     pub schemas: Vec<Schema>,
     pub assert_rules: Vec<AssertRule>,
+    pub aggregates: Vec<AssertRule>,
+}
+#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
+pub struct Aggregate {
+    pub ident: String,
+    pub operation: AggOperation,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Attribute {
@@ -41,4 +47,17 @@ pub enum Itype {
     Int,
     Bool,
     Float,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
+pub enum AggOperation {
+    COUNT,
+    AVG,
+    MAX,
+    MEDIAN,
+    MIN,
+    SUM,
+    STDDEV,
+    MAXEVER,
+    MINEVER,
 }

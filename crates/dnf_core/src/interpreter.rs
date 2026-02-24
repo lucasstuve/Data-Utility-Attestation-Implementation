@@ -1,5 +1,7 @@
+//use std::process::id;
+
 use crate::ast::{Conjunction, Disjunction, Operator, Pred, Term};
-use crate::epl::{ProgramAst, Schema};
+use crate::epl::{AggOperation, ProgramAst, Schema};
 extern crate alloc;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
@@ -12,7 +14,7 @@ pub struct Event {
 
 pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
     let schema = &p.schemas[0];
-
+    let mut event_data: Vec<Term> = Vec::new();
     p.assert_rules.iter().all(|r| {
         input.iter().any(|e| {
             let env = type_input(
@@ -21,9 +23,81 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
                 },
                 schema,
             );
-            eval_filter_dnf(&r.rule, &env)
+            //let counter_result = eval_aggreagtor();
+
+            let filter = eval_filter_dnf(&r.rule, &env);
+
+            if filter {
+                collect_event_data(&env, &p.aggregates[0].ident, &mut event_data);
+            };
+
+            let agg = eval_agg_data(
+                get_aggreage_assert_op(&p.aggregates[0].rule.clone()).unwrap(),
+                event_data.clone(),
+            );
+
+            let mut aggregate_env: BTreeMap<String, Term> = BTreeMap::new();
+            let ident = get_aggreage_assert_ident(&p.aggregates[0].rule.clone()).unwrap();
+            aggregate_env.insert(ident, agg.unwrap());
+            let aggreage_rule = eval_filter_dnf(&p.aggregates[0].rule, &aggregate_env);
+
+            return filter && aggreage_rule;
         })
     })
+}
+
+pub fn collect_event_data(event: &BTreeMap<String, Term>, ident: &String, out: &mut Vec<Term>) {
+    if let Some(t) = event.get(ident) {
+        out.push(t.clone());
+    }
+}
+
+pub fn eval_agg_data(op: AggOperation, data: Vec<Term>) -> Option<Term> {
+    let result = match op {
+        AggOperation::AVG => avg(&data),
+        AggOperation::COUNT => count(&data),
+        _ => unimplemented!("other analytics will be implemented!"),
+    };
+
+    return result;
+}
+
+pub fn avg(data: &[Term]) -> Option<Term> {
+    let (sum, count, is_int) =
+        data.iter()
+            .fold((0.0f64, 0f64, true), |(s, c, is_int), t| match t {
+                Term::Int(i) => (s + *i as f64, c + (1 as f64), true),
+                Term::Float(f) => (s + f, c + (1 as f64), false),
+                _ => (s, c, is_int),
+            });
+
+    if count == 0 as f64 {
+        None
+    } else if is_int {
+        Some(Term::Int((sum / count) as i64))
+    } else {
+        Some(Term::Float(sum / count as f64))
+    }
+}
+
+pub fn count(data: &[Term]) -> Option<Term> {
+    let count = data.iter().count();
+
+    return Some(Term::Float(count as f64));
+}
+
+pub fn as_f64(t: &Term) -> Option<f64> {
+    match t {
+        Term::Float(f) => Some(*f),
+        _ => unimplemented!("Must be Float."),
+    }
+}
+
+pub fn as_i64(t: &Term) -> Option<i64> {
+    match t {
+        Term::Int(i) => Some(*i),
+        _ => unimplemented!("Must be Int."),
+    }
 }
 
 pub fn type_input(e: Event, s: &Schema) -> BTreeMap<String, Term> {
@@ -118,5 +192,19 @@ mod test {
         };
 
         assert_eq!(eval_pred(&p, &env), true);
+    }
+}
+
+fn get_aggreage_assert_ident(dnf: &Vec<Disjunction>) -> Option<String> {
+    match &dnf.first()?.conj.first()?.preds.first()?.lhs {
+        Term::Aggregate(a) => Some(a.ident.clone()),
+        _ => None,
+    }
+}
+
+fn get_aggreage_assert_op(dnf: &Vec<Disjunction>) -> Option<AggOperation> {
+    match &dnf.first()?.conj.first()?.preds.first()?.lhs {
+        Term::Aggregate(a) => Some(a.operation.clone()),
+        _ => None,
     }
 }

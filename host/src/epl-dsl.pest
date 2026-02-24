@@ -1,6 +1,6 @@
 program = {SOI ~ epl ~  EOI  }
 
-epl = _{schema ~ assert_rule }
+epl = _{schema ~ assert_rule ~ aggregate_rule* }
 schema = {"CREATE" ~ "SCHEMA" ~ Ident ~ "("~ attribute_list? ~ ")" ~ ";"}
 
 attribute_list = {attribute ~ ("," ~ attribute)*}
@@ -8,3 +8,9 @@ attribute_list = {attribute ~ ("," ~ attribute)*}
 attribute = {Ident ~ Type} 
 
 assert_rule = {"assert" ~ Ident ~ "(" ~ dnf_statement ~ ")" ~ ";"}
+
+aggregate = { agg_op ~ "(" ~ Ident ~ ")"}
+
+aggregate_rule = {"assert" ~ "(" ~dnf_statement~ ")" ~ ";"}
+
+agg_op = {"AVG"| "COUNT"| "MAX"| "MIN"| "MEDIAN"|"SUM"| "STDDEV" |"MINEVER" | "MAXEVER"}

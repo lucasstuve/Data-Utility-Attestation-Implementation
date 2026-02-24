@@ -37,6 +37,8 @@ pub enum Term {
     Bool(bool),
     Str(String),
     Ident(String),
+
+    Aggregate(crate::epl::Aggregate),
 }
 
 impl Term {

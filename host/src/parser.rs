@@ -3,7 +3,9 @@
 //use std::sync::mpsc::RecvTimeoutError;
 
 use dnf_core::ast::{Conjunction, Disjunction, Operator, Pred, Term};
-use dnf_core::epl::{AssertRule, Attribute, AttributeList, Itype, ProgramAst, Schema};
+use dnf_core::epl::{
+    AggOperation, Aggregate, AssertRule, Attribute, AttributeList, Itype, ProgramAst, Schema,
+};
 use pest::Parser;
 use pest_derive::Parser;
 
@@ -27,11 +29,13 @@ pub fn parse_source(source: &str) -> Result<ProgramAst, pest::error::Error<Rule>
 fn build_program(program: pest::iterators::Pair<Rule>) -> ProgramAst {
     let mut schemas = Vec::new();
     let mut assert_rules = Vec::new();
+    let mut aggregates = Vec::new();
 
     for p in program.into_inner() {
         match p.as_rule() {
             Rule::schema => schemas.push(create_schema(p)),
             Rule::assert_rule => assert_rules.push(create_assert_rule(p)),
+            Rule::aggregate_rule => aggregates.push(create_aggregate_assert_rule(p)),
             Rule::EOI => {}
             _ => {}
         }
@@ -40,7 +44,53 @@ fn build_program(program: pest::iterators::Pair<Rule>) -> ProgramAst {
     return ProgramAst {
         schemas,
         assert_rules,
+        aggregates,
     };
+}
+
+fn create_aggregate_assert_rule(pair: pest::iterators::Pair<Rule>) -> AssertRule {
+    let mut dnf_pair = pair.into_inner().next().unwrap();
+    let dnf: Vec<Disjunction> = match dnf_pair.as_rule() {
+        Rule::Disjunction => vec![build_disjunction(dnf_pair)],
+        Rule::dnf_statement => build_dnf(dnf_pair.into_inner()),
+        other => unreachable!("Not expected other execution path!"),
+    };
+
+    return AssertRule {
+        ident: get_aggreage_assert_ident(dnf.clone()).unwrap(),
+        rule: dnf,
+    };
+}
+
+fn get_aggreage_assert_ident(dnf: Vec<Disjunction>) -> Option<String> {
+    let aggregate = &dnf.first()?.conj.first()?.preds.first()?.lhs;
+    match aggregate {
+        Term::Aggregate(a) => Some(a.ident.clone()),
+        _ => None,
+    }
+}
+
+fn get_aggreage_assert_op(dnf: Vec<Disjunction>) -> Option<AggOperation> {
+    let aggregate = &dnf.first()?.conj.first()?.preds.first()?.lhs;
+    match aggregate {
+        Term::Aggregate(a) => Some(a.operation.clone()),
+        _ => None,
+    }
+}
+
+fn build_agg_operator(pair: pest::iterators::Pair<Rule>) -> AggOperation {
+    match pair.as_str() {
+        "MAX" => AggOperation::MAX,
+        "COUNT" => AggOperation::COUNT,
+        "MIN" => AggOperation::MIN,
+        "AVG" => AggOperation::AVG,
+        "MEDIAN" => AggOperation::MEDIAN,
+        "STDDEV" => AggOperation::STDDEV,
+        "MAXEVER" => AggOperation::MAXEVER,
+        "MINEVER" => AggOperation::MINEVER,
+        "SUM" => AggOperation::SUM,
+        _ => unimplemented!("This aggregation operation is not supported!"),
+    }
 }
 
 fn create_schema(pair: pest::iterators::Pair<Rule>) -> Schema {
@@ -100,19 +150,11 @@ fn build_attribute(pair: pest::iterators::Pair<Rule>) -> Attribute {
             let mut it = pair.into_inner();
             let ident = build_ident(it.next().unwrap());
             let mut t: Itype = build_type(it.next().unwrap());
-
-            /*   if ident.as_str() == "value" {
-                t = Itype::String;
-            };
-
-            */
-
             return Attribute {
                 i_type: t,
                 ident: ident,
             };
         }
-
         _ => unreachable!("unexpected Term: {:?}", pair.as_rule()),
     }
 }
@@ -141,7 +183,7 @@ fn build_term(pair: pest::iterators::Pair<Rule>) -> Term {
         Rule::Int => Term::Int(pair.as_str().parse().unwrap()),
         Rule::Bool => Term::Bool(pair.as_str() == "true"),
         Rule::Float => Term::Float(pair.as_str().parse().unwrap()),
-
+        Rule::aggregate => build_aggregate(pair),
         // Assuming your grammar returns quoted strings like "hi"
         Rule::Str => {
             let s = pair.as_str();
@@ -154,6 +196,18 @@ fn build_term(pair: pest::iterators::Pair<Rule>) -> Term {
 
         _ => unreachable!("unexpected Term: {:?}", pair.as_rule()),
     }
+}
+
+fn build_aggregate(pair: pest::iterators::Pair<Rule>) -> Term {
+    let mut it = pair.into_inner();
+
+    let op = build_agg_operator(it.next().unwrap());
+    let ident = build_ident(it.next().unwrap());
+
+    return dnf_core::ast::Term::Aggregate(Aggregate {
+        ident: ident,
+        operation: op,
+    });
 }
 
 fn build_operator(pair: pest::iterators::Pair<Rule>) -> Operator {

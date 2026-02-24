@@ -24,7 +24,8 @@ fn main() {
     // Example user defined query string, first defining the data extraction than ASSERT a rule.
     // Note: the IDENTIFIER (e.g. dataFieldName) must exactly match the identifier used in the original JSON
     let source = r#"CREATE SCHEMA VehicleData (dataFieldName string, value float);
-                       assert VehicleData (value >= 81.0 AND dataFieldName == "profiles.targetSOCPercentage");"#;
+                          assert VehicleData (value  < 85.90) ; 
+                          assert (COUNT(value) > 2.0);"#; // TODO make count evaluation in eval_program -> INT
 
     let dnf = parser::parse_source(&source);
 
@@ -35,6 +36,8 @@ fn main() {
         }
         Ok(tree) => tree,
     };
+
+    println!("{:?}", &ast);
 
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
