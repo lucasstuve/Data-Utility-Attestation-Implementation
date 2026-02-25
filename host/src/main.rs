@@ -19,14 +19,14 @@ fn main() {
 
     let index_list = create_events_indexes(file_str.as_str());
 
-    // As defined in the guest logic (secret DataValue set to 11 and OtherValue set true)
+    // As defined in the guest logic (secret DataValue set to 11 and OtherValue set true).
 
     // Example user defined query string, first defining the data extraction than ASSERT a rule.
     // Note: the IDENTIFIER (e.g. dataFieldName) must exactly match the identifier used in the original JSON
     let source = r#"CREATE SCHEMA VehicleData (dataFieldName string, value float);
                           assert VehicleData (value  < 100.0) ;   
-                          assert (AVG(value) == 47.75);"#;
-    // Make also sure the value comparing against has same data type as defined in the SCHEMA
+                          assert (AVG(value) > 48.75);"#;
+    // Make also sure the value comparing against has same data type as defined in the SCHEMA.
 
     let dnf = parser::parse_source(&source);
 

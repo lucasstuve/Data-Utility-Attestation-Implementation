@@ -16,35 +16,51 @@ pub struct Event {
 pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
     let schema = &p.schemas[0];
     let mut event_data: Vec<Term> = Vec::new();
-    p.assert_rules.iter().all(|r| {
-        input.iter().any(|e| {
+    let mut filter_result = true;
+
+    // Create sub-set of event data (fullfills ASSERT rule
+    for r in &p.assert_rules {
+        let pass = input.iter().all(|e| {
             let env = type_input(
                 Event {
                     data: e.data.clone(),
                 },
                 schema,
             );
+            eval_filter_dnf(&r.rule, &env)
+        });
 
-            let filter = eval_filter_dnf(&r.rule, &env);
+        filter_result = pass;
+    }
 
-            if filter {
-                collect_event_data(&env, &p.aggregates[0].ident, &mut event_data);
-            };
+    // Collect the event data that passes the filter criteria
+    let dnf_filter = &p.assert_rules[0].rule;
+    let mut event_data = Vec::new();
+    for e in &input {
+        let env = type_input(
+            Event {
+                data: e.data.clone(),
+            },
+            schema,
+        );
+        if eval_filter_dnf(dnf_filter, &env) {
+            collect_event_data(&env, &p.aggregates[0].ident, &mut event_data);
+        }
+    }
 
-            let aggregation_result = eval_agg_data(
-                get_aggreage_assert_op(&p.aggregates[0].rule.clone()).unwrap(),
-                event_data.clone(),
-            );
+    // Compute aggregate on filtered data
+    let op = get_aggreage_assert_op(&p.aggregates[0].rule).unwrap();
+    let aggregation_result = eval_agg_data(op, event_data).unwrap();
 
-            let mut aggregate_env: BTreeMap<String, Term> = BTreeMap::new();
-            let ident = get_aggreage_assert_ident(&p.aggregates[0].rule.clone()).unwrap();
-            aggregate_env.insert(ident, aggregation_result.unwrap());
-            let aggreage_rule =
-                eval_pred(&p.aggregates[0].rule[0].conj[0].preds[0], &aggregate_env);
+    // Evaluate predicate on aggregation function result
+    let ident = get_aggreage_assert_ident(&p.aggregates[0].rule).unwrap();
+    let mut aggregate_env = BTreeMap::new();
+    aggregate_env.insert(ident, aggregation_result);
 
-            return filter && aggreage_rule;
-        })
-    })
+    let pred = &p.aggregates[0].rule[0].conj[0].preds[0];
+    let agg_pred_result = eval_pred(pred, &aggregate_env);
+
+    return filter_result && agg_pred_result;
 }
 
 pub fn collect_event_data(event: &BTreeMap<String, Term>, ident: &String, out: &mut Vec<Term>) {
@@ -205,8 +221,6 @@ pub fn sum(data: &[Term]) -> Option<Term> {
 }
 
 pub fn median(data: &[Term]) -> Option<Term> {
-    let data_len = &data.len();
-
     let mut float_values = Vec::new();
     let mut int_values = Vec::new();
 
@@ -223,8 +237,8 @@ pub fn median(data: &[Term]) -> Option<Term> {
             _ => unreachable!("Median is only implemented for numerics (int, float)!"),
         }
     }
-    let mid_f = float_values.len();
-    let mid_i = int_values.len();
+    let mid_f = float_values.len() / 2;
+    let mid_i = int_values.len() / 2;
 
     float_values.sort_by(|a, b| a.total_cmp(b));
     int_values.sort();
@@ -357,5 +371,182 @@ fn get_aggreage_assert_op(dnf: &Vec<Disjunction>) -> Option<AggOperation> {
     match &dnf.first()?.conj.first()?.preds.first()?.lhs {
         Term::Aggregate(a) => Some(a.operation.clone()),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod test_interpreter {
+    use crate::{
+        ast::Term,
+        interpreter::{avg, count, max, median, min, stddev, sum},
+    };
+
+    #[test]
+    fn test_median_int_odd_number() {
+        let int_terms = [
+            Term::Int(23),
+            Term::Int(234),
+            Term::Int(2),
+            Term::Int(56),
+            Term::Int(45),
+        ];
+
+        assert_eq!(median(&int_terms).unwrap(), Term::Int(45));
+    }
+
+    #[test]
+    fn test_median_int_even_number() {
+        let int_terms = [Term::Int(23), Term::Int(234), Term::Int(56), Term::Int(45)];
+
+        assert_eq!(median(&int_terms).unwrap(), Term::Int(56)); // means => Index 2,5 => 3
+    }
+    #[test]
+    fn test_median_float_odd_number() {
+        let int_terms = [
+            Term::Float(23.0),
+            Term::Float(234.0),
+            Term::Float(56.0),
+            Term::Float(45.0),
+            Term::Float(12.0),
+        ];
+
+        assert_eq!(median(&int_terms).unwrap(), Term::Float(45.0));
+    }
+
+    #[test]
+    fn test_avg_int_odd_number() {
+        let int_terms = [
+            Term::Int(23),
+            Term::Int(234),
+            Term::Int(2),
+            Term::Int(56),
+            Term::Int(45),
+        ];
+
+        assert_eq!(avg(&int_terms).unwrap(), Term::Int(72));
+    }
+    #[test]
+    fn test_avg_int_even_number() {
+        let int_terms = [Term::Int(23), Term::Int(234), Term::Int(56), Term::Int(45)];
+
+        assert_eq!(avg(&int_terms).unwrap(), Term::Int(89)); //TODO change return for Int input => Float value  // Or cast correctly
+    }
+
+    #[test]
+    fn test_avg_float_even_number() {
+        let int_terms = [
+            Term::Float(23.0),
+            Term::Float(234.0),
+            Term::Float(56.0),
+            Term::Float(45.0),
+        ];
+
+        assert_eq!(avg(&int_terms).unwrap(), Term::Float(89.5));
+    }
+
+    #[test]
+    fn test_max_float_even_number() {
+        let int_terms = [
+            Term::Float(23.0),
+            Term::Float(234.0),
+            Term::Float(56.0),
+            Term::Float(45.0),
+        ];
+
+        assert_eq!(max(&int_terms).unwrap(), Term::Float(234.0));
+    }
+
+    #[test]
+    fn test_max_float_odd_number() {
+        let int_terms = [
+            Term::Float(23.0),
+            Term::Float(234.0),
+            Term::Float(56.0),
+            Term::Float(45.0),
+            Term::Float(550.0),
+        ];
+
+        assert_eq!(max(&int_terms).unwrap(), Term::Float(550.0));
+    }
+
+    #[test]
+    fn test_sum_float_odd_number() {
+        let int_terms = [
+            Term::Float(23.0),
+            Term::Float(234.0),
+            Term::Float(56.0),
+            Term::Float(45.0),
+            Term::Float(550.0),
+        ];
+
+        assert_eq!(sum(&int_terms).unwrap(), Term::Float(908.0));
+    }
+
+    #[test]
+    fn test_stddev_float_odd_number() {
+        let int_terms = [
+            Term::Float(23.0),
+            Term::Float(234.0),
+            Term::Float(56.0),
+            Term::Float(45.0),
+            Term::Float(550.0),
+        ];
+
+        assert_eq!(stddev(&int_terms).unwrap(), Term::Float(222.51584213264456));
+    }
+
+    #[test]
+    fn test_stddev_int_odd_number() {
+        let int_terms = [
+            Term::Int(23),
+            Term::Int(234),
+            Term::Int(56),
+            Term::Int(45),
+            Term::Int(550),
+        ];
+
+        assert_eq!(stddev(&int_terms).unwrap(), Term::Float(222.51685329430669));
+        // TODO left Float, where right is Int()
+    }
+
+    #[test]
+    fn test_count_int_odd_number() {
+        let int_terms = [
+            Term::Int(23),
+            Term::Int(234),
+            Term::Int(56),
+            Term::Int(45),
+            Term::Int(550),
+        ];
+
+        assert_eq!(count(&int_terms).unwrap(), Term::Int(5)); // TODO left Float, where right is Int()
+    }
+
+    #[test]
+    fn test_count_int_even_number() {
+        let int_terms = [
+            Term::Int(23),
+            Term::Int(234),
+            Term::Int(56),
+            Term::Int(45),
+            Term::Int(550),
+            Term::Int(342),
+        ];
+
+        assert_eq!(count(&int_terms).unwrap(), Term::Int(6)); // TODO left Float, where right is Int()
+    }
+
+    #[test]
+    fn test_count_flaot_even_number() {
+        let int_terms = [
+            Term::Float(23.0),
+            Term::Float(234.0),
+            Term::Float(56.0),
+            Term::Float(45.0),
+            Term::Float(550.0),
+            Term::Float(342.0),
+        ];
+
+        assert_eq!(count(&int_terms).unwrap(), Term::Int(6)); // TODO left Float, where right is Int()
     }
 }

@@ -41,6 +41,7 @@ fn main() {
 
     // start the evaluator to obtain the boolean result over all event data
     let result = eval_program(epl, events);
+    
     // Commit the programs result to the journal
     env::commit(&result);
 }
