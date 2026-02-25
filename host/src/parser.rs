@@ -29,7 +29,7 @@ pub fn parse_source(source: &str) -> Result<ProgramAst, pest::error::Error<Rule>
 fn build_program(program: pest::iterators::Pair<Rule>) -> ProgramAst {
     let mut schemas = Vec::new();
     let mut assert_rules = Vec::new();
-    let mut aggregates = Vec::new();
+    let mut aggregates = Vec::new(); //TODO can be changed into a simple Predicate (lower effort in evaluation).
 
     for p in program.into_inner() {
         match p.as_rule() {
@@ -57,6 +57,7 @@ fn create_aggregate_assert_rule(pair: pest::iterators::Pair<Rule>) -> AssertRule
     };
 
     return AssertRule {
+        //TODO can be changed into simple predicate over the evaluated aggregat function like (SUM(value) < 56)
         ident: get_aggreage_assert_ident(dnf.clone()).unwrap(),
         rule: dnf,
     };

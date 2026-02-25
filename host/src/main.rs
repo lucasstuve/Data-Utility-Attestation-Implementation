@@ -24,8 +24,9 @@ fn main() {
     // Example user defined query string, first defining the data extraction than ASSERT a rule.
     // Note: the IDENTIFIER (e.g. dataFieldName) must exactly match the identifier used in the original JSON
     let source = r#"CREATE SCHEMA VehicleData (dataFieldName string, value float);
-                          assert VehicleData (value  < 85.90) ; 
-                          assert (COUNT(value) > 2.0);"#; // TODO make count evaluation in eval_program -> INT
+                          assert VehicleData (value  < 100.0) ;   
+                          assert (AVG(value) == 47.75);"#;
+    // Make also sure the value comparing against has same data type as defined in the SCHEMA
 
     let dnf = parser::parse_source(&source);
 

@@ -4,6 +4,7 @@ use crate::ast::{Conjunction, Disjunction, Operator, Pred, Term};
 use crate::epl::{AggOperation, ProgramAst, Schema};
 extern crate alloc;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use libm::sqrt;
 
 pub type Env = BTreeMap<String, Term>;
 
@@ -23,7 +24,6 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
                 },
                 schema,
             );
-            //let counter_result = eval_aggreagtor();
 
             let filter = eval_filter_dnf(&r.rule, &env);
 
@@ -31,15 +31,16 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
                 collect_event_data(&env, &p.aggregates[0].ident, &mut event_data);
             };
 
-            let agg = eval_agg_data(
+            let aggregation_result = eval_agg_data(
                 get_aggreage_assert_op(&p.aggregates[0].rule.clone()).unwrap(),
                 event_data.clone(),
             );
 
             let mut aggregate_env: BTreeMap<String, Term> = BTreeMap::new();
             let ident = get_aggreage_assert_ident(&p.aggregates[0].rule.clone()).unwrap();
-            aggregate_env.insert(ident, agg.unwrap());
-            let aggreage_rule = eval_filter_dnf(&p.aggregates[0].rule, &aggregate_env);
+            aggregate_env.insert(ident, aggregation_result.unwrap());
+            let aggreage_rule =
+                eval_pred(&p.aggregates[0].rule[0].conj[0].preds[0], &aggregate_env);
 
             return filter && aggreage_rule;
         })
@@ -56,7 +57,13 @@ pub fn eval_agg_data(op: AggOperation, data: Vec<Term>) -> Option<Term> {
     let result = match op {
         AggOperation::AVG => avg(&data),
         AggOperation::COUNT => count(&data),
-        _ => unimplemented!("other analytics will be implemented!"),
+        AggOperation::SUM => sum(&data),
+        AggOperation::MEDIAN => median(&data),
+        AggOperation::MIN => min(&data),
+        AggOperation::MAX => max(&data),
+        AggOperation::STDDEV => stddev(&data), //TODO think about MINEVER, MAXEVER function
+
+        _ => unimplemented!("No valid aggregation operation, or not yet implemented!"),
     };
 
     return result;
@@ -81,9 +88,152 @@ pub fn avg(data: &[Term]) -> Option<Term> {
 }
 
 pub fn count(data: &[Term]) -> Option<Term> {
-    let count = data.iter().count();
+    return Some(Term::Int(data.len() as i64));
+}
 
-    return Some(Term::Float(count as f64));
+pub fn stddev(data: &[Term]) -> Option<Term> {
+    let n = data.len();
+
+    let mean_f64: f64 = match avg(&data).unwrap() {
+        Term::Float(f) => f,
+        Term::Int(i) => i as f64,
+        _ => return None,
+    };
+
+    let inner_term: f64 = data
+        .iter()
+        .map(|t| match *t {
+            Term::Float(f) => {
+                let d = f - mean_f64;
+                d * d
+            }
+            Term::Int(i) => {
+                let d = (i as f64) - mean_f64;
+                (d * d) as f64
+            }
+            _ => unreachable!("STDDEV is only implemented for numerics (Int, Float)."),
+        })
+        .sum();
+
+    let var = inner_term / ((n - 1) as f64);
+    let sd = sqrt(var);
+
+    return Some(Term::Float(sd));
+}
+pub fn max(data: &[Term]) -> Option<Term> {
+    let mut float_values = Vec::new();
+    let mut int_values = Vec::new();
+
+    //let mut int_values = [i64];
+    let mut is_int = true;
+
+    for t in data {
+        match *t {
+            Term::Float(f) => {
+                float_values.push(f);
+                is_int = false;
+            }
+            Term::Int(i) => int_values.push(i),
+            _ => unreachable!("Median is only implemented for numerics (int, float)!"),
+        }
+    }
+
+    if is_int {
+        return int_values.iter().copied().max().map(Term::Int);
+    } else {
+        return float_values
+            .iter()
+            .copied()
+            .max_by(|a, b| a.total_cmp(b))
+            .map(Term::Float);
+    }
+}
+
+pub fn min(data: &[Term]) -> Option<Term> {
+    let mut float_values = Vec::new();
+    let mut int_values = Vec::new();
+
+    //let mut int_values = [i64];
+    let mut is_int = true;
+
+    for t in data {
+        match *t {
+            Term::Float(f) => {
+                float_values.push(f);
+                is_int = false;
+            }
+            Term::Int(i) => int_values.push(i),
+            _ => unreachable!("Median is only implemented for numerics (int, float)!"),
+        }
+    }
+
+    if is_int {
+        return int_values.iter().copied().min().map(Term::Int);
+    } else {
+        return float_values
+            .iter()
+            .copied()
+            .min_by(|a, b| a.total_cmp(b))
+            .map(Term::Float);
+    }
+}
+
+pub fn sum(data: &[Term]) -> Option<Term> {
+    let mut result_f: f64 = 0.0;
+    let mut result_i: i64 = 0;
+    let mut is_int = true;
+
+    for t in data {
+        match t {
+            Term::Float(f) => {
+                result_f = result_f + f;
+                is_int = false;
+            }
+            Term::Int(i) => {
+                result_i = result_i + i;
+                is_int = true;
+            }
+            _ => unreachable!("Only for numeric types int, float implemented!"),
+        }
+    }
+
+    if is_int {
+        return Some(Term::Int(result_i));
+    } else {
+        return Some(Term::Float(result_f));
+    }
+}
+
+pub fn median(data: &[Term]) -> Option<Term> {
+    let data_len = &data.len();
+
+    let mut float_values = Vec::new();
+    let mut int_values = Vec::new();
+
+    //let mut int_values = [i64];
+    let mut is_int = true;
+
+    for t in data {
+        match *t {
+            Term::Float(f) => {
+                float_values.push(f);
+                is_int = false;
+            }
+            Term::Int(i) => int_values.push(i),
+            _ => unreachable!("Median is only implemented for numerics (int, float)!"),
+        }
+    }
+    let mid_f = float_values.len();
+    let mid_i = int_values.len();
+
+    float_values.sort_by(|a, b| a.total_cmp(b));
+    int_values.sort();
+
+    if is_int {
+        return Some(Term::Int(int_values[mid_i]));
+    } else {
+        return Some(Term::Float(float_values[mid_f]));
+    }
 }
 
 pub fn as_f64(t: &Term) -> Option<f64> {
@@ -140,6 +290,7 @@ fn eval_conj(conj: &Conjunction, env: &Env) -> bool {
 fn resolve_term(t: &Term, env: &Env) -> Option<Term> {
     match t {
         Term::Ident(name) => env.get(name).cloned(),
+        Term::Aggregate(a) => env.get(&a.ident).cloned(),
         _ => Some(t.clone()),
     }
 }
