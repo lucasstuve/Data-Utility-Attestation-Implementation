@@ -4,7 +4,8 @@
 
 use dnf_core::ast::{Conjunction, Disjunction, Operator, Pred, Term};
 use dnf_core::epl::{
-    AggOperation, Aggregate, AssertRule, Attribute, AttributeList, Itype, ProgramAst, Schema,
+    AggOperation, Aggregate, AssertRule, Attribute, AttributeList, Itype, ProgramAst, Quantifier,
+    Schema,
 };
 use pest::Parser;
 use pest_derive::Parser;
@@ -60,6 +61,7 @@ fn create_aggregate_assert_rule(pair: pest::iterators::Pair<Rule>) -> AssertRule
         //TODO can be changed into simple predicate over the evaluated aggregat function like (SUM(value) < 56)
         ident: get_aggreage_assert_ident(dnf.clone()).unwrap(),
         rule: dnf,
+        quantifier: Quantifier::ALL,
     };
 }
 
@@ -114,6 +116,8 @@ fn create_assert_rule(pair: pest::iterators::Pair<Rule>) -> AssertRule {
     match pair.as_rule() {
         Rule::assert_rule => {
             let mut it = pair.into_inner();
+
+            let quant = build_quantifer(it.next().unwrap());
             let ident = build_ident(it.next().unwrap());
             let dnf_pair = it.next().unwrap();
 
@@ -123,9 +127,30 @@ fn create_assert_rule(pair: pest::iterators::Pair<Rule>) -> AssertRule {
                 other => unreachable!("Not expected other execution path!"),
             };
 
-            return AssertRule { ident, rule: dnf };
+            return AssertRule {
+                ident,
+                rule: dnf,
+                quantifier: quant,
+            };
         }
         _ => unreachable!("Rule::assert_rule is expected here!"),
+    }
+}
+
+fn build_quantifer(pair: pest::iterators::Pair<Rule>) -> Quantifier {
+    match pair.as_rule() {
+        Rule::quantifier => {
+            let q_op = pair.as_str().to_string();
+
+            if q_op == "ANY" {
+                return Quantifier::ANY;
+            } else if q_op == "ALL" {
+                return Quantifier::ALL;
+            } else {
+                panic!("Unknown quantifier: {}", q_op);
+            }
+        }
+        _ => unreachable!("Must be Identfier!"),
     }
 }
 

@@ -1,7 +1,7 @@
 //use std::process::id;
 
 use crate::ast::{Conjunction, Disjunction, Operator, Pred, Term};
-use crate::epl::{AggOperation, ProgramAst, Schema};
+use crate::epl::{AggOperation, ProgramAst, Quantifier, Schema};
 extern crate alloc;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use libm::sqrt;
@@ -20,17 +20,27 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
 
     // Create sub-set of event data (fullfills ASSERT rule)
     for r in &p.assert_rules {
-        let pass = input.iter().all(|e| {
-            let env = type_input(
-                Event {
-                    data: e.data.clone(),
-                },
-                schema,
-            );
-            eval_filter_dnf(&r.rule, &env)
-        });
-
-        filter_result = pass;
+        if r.quantifier == Quantifier::ALL {
+            filter_result = input.iter().all(|e| {
+                let env = type_input(
+                    Event {
+                        data: e.data.clone(),
+                    },
+                    schema,
+                );
+                eval_filter_dnf(&r.rule, &env)
+            });
+        } else if r.quantifier == Quantifier::ANY {
+            filter_result = input.iter().any(|e| {
+                let env = type_input(
+                    Event {
+                        data: e.data.clone(),
+                    },
+                    schema,
+                );
+                eval_filter_dnf(&r.rule, &env)
+            });
+        }
     }
 
     // Collect the event data that passes the filter criteria
@@ -43,22 +53,26 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
             },
             schema,
         );
-        if eval_filter_dnf(dnf_filter, &env) {
+        if (&p.aggregates.len() > &(0 as usize)) && eval_filter_dnf(dnf_filter, &env) {
             collect_event_data(&env, &p.aggregates[0].ident, &mut event_data);
         }
     }
 
+    let mut agg_pred_result = true;
+
     // Compute aggregate on filtered data
-    let op = get_aggreage_assert_op(&p.aggregates[0].rule).unwrap();
-    let aggregation_result = eval_agg_data(op, event_data).unwrap();
+    if p.aggregates.len() != 0 {
+        let op = get_aggreage_assert_op(&p.aggregates[0].rule).unwrap();
+        let aggregation_result = eval_agg_data(op, event_data).unwrap();
 
-    // Evaluate predicate on aggregation function result
-    let ident = get_aggreage_assert_ident(&p.aggregates[0].rule).unwrap();
-    let mut aggregate_env = BTreeMap::new();
-    aggregate_env.insert(ident, aggregation_result);
+        // Evaluate predicate on aggregation function result
+        let ident = get_aggreage_assert_ident(&p.aggregates[0].rule).unwrap();
+        let mut aggregate_env = BTreeMap::new();
+        aggregate_env.insert(ident, aggregation_result);
 
-    let pred = &p.aggregates[0].rule[0].conj[0].preds[0];
-    let agg_pred_result = eval_pred(pred, &aggregate_env);
+        let pred = &p.aggregates[0].rule[0].conj[0].preds[0];
+        agg_pred_result = eval_pred(pred, &aggregate_env);
+    }
 
     return filter_result && agg_pred_result;
 }

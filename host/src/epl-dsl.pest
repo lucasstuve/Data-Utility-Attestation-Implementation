@@ -7,7 +7,9 @@ attribute_list = {attribute ~ ("," ~ attribute)*}
 
 attribute = {Ident ~ Type} 
 
-assert_rule = {"assert" ~ Ident ~ "(" ~ dnf_statement ~ ")" ~ ";"}
+assert_rule = {"assert" ~ quantifier ~ Ident ~ "(" ~ dnf_statement ~ ")" ~ ";"}
+
+quantifier = {"ANY" |"ALL"}
 
 aggregate = { agg_op ~ "(" ~ Ident ~ ")"}
 

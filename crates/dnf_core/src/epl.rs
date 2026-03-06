@@ -39,6 +39,7 @@ pub struct Schema {
 pub struct AssertRule {
     pub ident: String, // should be used as Ident
     pub rule: Vec<Disjunction>,
+    pub quantifier: Quantifier,
 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 
@@ -47,6 +48,12 @@ pub enum Itype {
     Int,
     Bool,
     Float,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
+pub enum Quantifier {
+    ANY,
+    ALL,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
