@@ -15,10 +15,10 @@ pub struct Event {
 
 pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
     let schema = &p.schemas[0];
-    let mut event_data: Vec<Term> = Vec::new();
+    //let mut event_data: Vec<Term> = Vec::new();
     let mut filter_result = true;
 
-    // Create sub-set of event data (fullfills ASSERT rule
+    // Create sub-set of event data (fullfills ASSERT rule)
     for r in &p.assert_rules {
         let pass = input.iter().all(|e| {
             let env = type_input(

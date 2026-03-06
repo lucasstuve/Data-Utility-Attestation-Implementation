@@ -8,6 +8,7 @@ mod parser;
 mod predata_processor;
 use risc0_zkvm::{default_prover, ExecutorEnv};
 use std::fs;
+use std::time::Instant;
 
 use crate::predata_processor::create_events_indexes;
 fn main() {
@@ -24,7 +25,7 @@ fn main() {
     // Example user defined query string, first defining the data extraction than ASSERT a rule.
     // Note: the IDENTIFIER (e.g. dataFieldName) must exactly match the identifier used in the original JSON
     let source = r#"CREATE SCHEMA VehicleData (dataFieldName string, value float);
-                          assert VehicleData (value  < 100.0) ;   
+                          assert VehicleData (value  < 45.0) ;   
                           assert (AVG(value) > 48.75);"#;
     // Make also sure the value comparing against has same data type as defined in the SCHEMA.
 
@@ -55,7 +56,11 @@ fn main() {
         .build()
         .unwrap();
     let prover = default_prover();
+    // measure proving time
+    let t = Instant::now();
     let prove_info = prover.prove(env, EVAL_AST_ELF).unwrap();
+    eprint!("Proving time is: {:?}", t.elapsed());
+    println!("\n");
     let receipt = prove_info.receipt;
 
     // Receive the boolean result and print it.
