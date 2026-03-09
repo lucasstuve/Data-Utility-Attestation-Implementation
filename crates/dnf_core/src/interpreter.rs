@@ -1,14 +1,13 @@
-//use std::process::id;
-
 use crate::ast::{Conjunction, Disjunction, Operator, Pred, Term};
-use crate::epl::{AggOperation, ProgramAst, Quantifier, Schema};
+use crate::epl::{AggOperation, ProgramAst, Quantifier, Schema, TimeUnit, TimeWindow, Window};
 extern crate alloc;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use chrono::{DateTime, FixedOffset, NaiveDateTime, Timelike, Utc};
 use libm::sqrt;
 
 pub type Env = BTreeMap<String, Term>;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Event {
     pub data: Vec<Term>,
 }
@@ -41,6 +40,12 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
                 eval_filter_dnf(&r.rule, &env)
             });
         }
+    }
+
+    //TODO: Implement the interpreter for the Window-Rule/s
+
+    if p.window_rule != None {
+        eval_window_rule(p.window_rule.unwrap(), input.clone(), 2 as usize);
     }
 
     // Collect the event data that passes the filter criteria
@@ -80,6 +85,93 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
 pub fn collect_event_data(event: &BTreeMap<String, Term>, ident: &String, out: &mut Vec<Term>) {
     if let Some(t) = event.get(ident) {
         out.push(t.clone());
+    }
+}
+
+pub fn eval_window_rule(w: Window, mut events: Vec<Event>, utc_pos: usize) -> Vec<Vec<Event>> {
+    match w {
+        Window::CountWindow(count_win) => {
+            let mut c_windows = Vec::new();
+
+            while events.len() > count_win.w_width as usize {
+                let rest = events.split_off(count_win.w_width as usize);
+
+                c_windows.push(events);
+                events = rest;
+            }
+
+            return c_windows;
+        }
+        Window::TimeWindow(TimeWindow { time_unit, w_width }) => {
+            let window_in_ms = get_time_window_ms(time_unit, w_width);
+            let mut tstemp_events: Vec<(Event, DateTime<FixedOffset>)> = events
+                .into_iter()
+                .map(|e| {
+                    let dt = match &e.data[utc_pos] {
+                        Term::Str(s) => {
+                            /*  NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
+                            .unwrap_or_else(|err| {
+                                panic!("Timestamp not valid!{:?}, {:?}", s, err)
+                            })
+                            .and_utc() */
+                            DateTime::parse_from_rfc3339(s).unwrap()
+                        }
+                        _ => panic!("Expected (TimeStampFormat might vary) string"),
+                    };
+                    (e, dt)
+                })
+                .collect();
+
+            tstemp_events.sort_by_key(|(_, d)| *d);
+
+            let mut window: Vec<Event> = Vec::new();
+            let mut win_vec: Vec<Vec<Event>> = Vec::new();
+
+            if tstemp_events.is_empty() {
+                return win_vec;
+            }
+
+            let mut window_start = tstemp_events[0].1.timestamp_millis();
+
+            for (e, d) in tstemp_events {
+                if d.timestamp_millis() < window_start + window_in_ms {
+                    window.push(e);
+                } else {
+                    win_vec.push(window.clone());
+                    window.clear();
+                    window.push(e);
+                    window_start = d.timestamp_millis();
+                }
+            }
+
+            if !window.clone().is_empty() {
+                win_vec.push(window);
+            }
+
+            return win_vec;
+        }
+    }
+}
+
+pub fn get_time_window_ms(time_unit: TimeUnit, w_width: Term) -> i64 {
+    match w_width {
+        Term::Int(i) => match time_unit {
+            TimeUnit::MS => i as i64,
+            TimeUnit::S => (i / 1000) as i64,
+            TimeUnit::MIN => (60 * i / 1000) as i64,
+            TimeUnit::H => (60 * 60 * i / 1000) as i64,
+            TimeUnit::D => (24 * 60 * 60 * i / 1000) as i64,
+            _ => unimplemented!("Please choose a supported time unit: MS, S, MIN, H, D"),
+        },
+        Term::Float(f) => match time_unit {
+            TimeUnit::MS => f as i64,
+            TimeUnit::S => (f / 1000.0) as i64,
+            TimeUnit::MIN => (60_f64 * f / 1000.0) as i64,
+            TimeUnit::H => (60.0 * 60.0 * f / 1000.0) as i64,
+            TimeUnit::D => (24.0 * 60.0 * 60.0 * f / 1000.0) as i64,
+            _ => unimplemented!("Please choose a supported time unit: MS, S, MIN, H, D"),
+        },
+        _ => unimplemented!("Only Int or Float a valid types to specify the TimeWindow!"),
     }
 }
 

@@ -13,6 +13,7 @@ pub struct ProgramAst {
     pub schemas: Vec<Schema>,
     pub assert_rules: Vec<AssertRule>,
     pub aggregates: Vec<AssertRule>,
+    pub window_rule: Option<Window>,
 }
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Aggregate {
@@ -50,6 +51,19 @@ pub enum Itype {
     Float,
 }
 
+#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
+
+pub struct TimeWindow {
+    pub w_width: Term,
+    pub time_unit: TimeUnit,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Serialize, Deserialize)]
+
+pub struct CountWindow {
+    pub w_width: u64,
+}
+
 #[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
 pub enum Quantifier {
     ANY,
@@ -67,4 +81,19 @@ pub enum AggOperation {
     STDDEV,
     MAXEVER,
     MINEVER,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
+pub enum TimeUnit {
+    MS,
+    S,
+    MIN,
+    H,
+    D,
+}
+
+#[derive(Debug, PartialEq, Serialize, PartialOrd, Deserialize, Clone)]
+pub enum Window {
+    TimeWindow(TimeWindow),
+    CountWindow(CountWindow),
 }

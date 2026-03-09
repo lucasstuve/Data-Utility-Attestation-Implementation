@@ -4,11 +4,12 @@
 
 use dnf_core::ast::{Conjunction, Disjunction, Operator, Pred, Term};
 use dnf_core::epl::{
-    AggOperation, Aggregate, AssertRule, Attribute, AttributeList, Itype, ProgramAst, Quantifier,
-    Schema,
+    AggOperation, Aggregate, AssertRule, Attribute, AttributeList, CountWindow, Itype, ProgramAst,
+    Quantifier, Schema, TimeUnit, TimeWindow, Window,
 };
 use pest::Parser;
 use pest_derive::Parser;
+use risc0_zkvm_platform::syscall::bigint::WIDTH_WORDS;
 
 #[derive(Parser)]
 //#[grammar = "grammar.pest"]
@@ -31,12 +32,16 @@ fn build_program(program: pest::iterators::Pair<Rule>) -> ProgramAst {
     let mut schemas = Vec::new();
     let mut assert_rules = Vec::new();
     let mut aggregates = Vec::new(); //TODO can be changed into a simple Predicate (lower effort in evaluation).
+    let mut window_rule = None;
 
     for p in program.into_inner() {
         match p.as_rule() {
             Rule::schema => schemas.push(create_schema(p)),
             Rule::assert_rule => assert_rules.push(create_assert_rule(p)),
             Rule::aggregate_rule => aggregates.push(create_aggregate_assert_rule(p)),
+            Rule::window_rule => {
+                window_rule = Some(create_window(p));
+            }
             Rule::EOI => {}
             _ => {}
         }
@@ -46,7 +51,50 @@ fn build_program(program: pest::iterators::Pair<Rule>) -> ProgramAst {
         schemas,
         assert_rules,
         aggregates,
+        window_rule,
     };
+}
+
+fn create_window(pair: pest::iterators::Pair<Rule>) -> Window {
+    let mut it = pair.into_inner();
+    let ident_rule = it.next().unwrap();
+    let window_pair = it.next().unwrap(); // TimeWindow or CountWindow
+
+    match window_pair.as_rule() {
+        Rule::TimeWindow => {
+            let mut inner = window_pair.into_inner();
+            let width_pair = inner.next().unwrap();
+            let unit_pair = inner.next().unwrap();
+
+            Window::TimeWindow(TimeWindow {
+                w_width: build_term(width_pair),
+                time_unit: build_time_unit(unit_pair),
+            })
+        }
+        Rule::CountWindow => {
+            let mut inner = window_pair.into_inner();
+            let width_pair = inner.next().unwrap();
+
+            Window::CountWindow(CountWindow {
+                w_width: width_pair
+                    .as_str()
+                    .parse()
+                    .expect("Parsed as u64 expected!"),
+            })
+        }
+        _ => unreachable!("Not supported type of Window. Allowed are: TimeWindow or CountWindow."),
+    }
+}
+
+fn build_time_unit(pair: pest::iterators::Pair<Rule>) -> TimeUnit {
+    match pair.as_str() {
+        "ms" => TimeUnit::MS,
+        "s" => TimeUnit::S,
+        "min" => TimeUnit::MIN,
+        "h" => TimeUnit::H,
+        "d" => TimeUnit::D,
+        _ => unreachable!("Not a supported time unit. Only (ms, s, min, h, d)"),
+    }
 }
 
 fn create_aggregate_assert_rule(pair: pest::iterators::Pair<Rule>) -> AssertRule {

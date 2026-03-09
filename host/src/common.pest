@@ -9,3 +9,5 @@ Ident = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_") * ~ ("." ~ (ASCII_AL
 
 Keyword     = { "AND" | "OR" | "true" | "false" | "var" | "string" | "u64" | "i64" | "bool" | "schema" | "create" }
 Type = {"bool" | "float" | "int" | "string" }
+
+TimeUnit ={"ms" | "s" | "min" | "h" | "d"}
