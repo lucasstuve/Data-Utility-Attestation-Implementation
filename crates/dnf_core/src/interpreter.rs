@@ -43,10 +43,7 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
     }
 
     //TODO: Implement the interpreter for the Window-Rule/s
-
-    if p.window_rule != None {
-        eval_window_rule(p.window_rule.unwrap(), input.clone(), 2 as usize);
-    }
+    let mut window_eval_flag: bool = p.window_rule.is_some();
 
     // Collect the event data that passes the filter criteria
     let dnf_filter = &p.assert_rules[0].rule;
@@ -66,26 +63,80 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
     let mut agg_pred_result = true;
 
     // Compute aggregate on filtered data
-    if p.aggregates.len() != 0 {
-        let op = get_aggreage_assert_op(&p.aggregates[0].rule).unwrap();
-        let aggregation_result = eval_agg_data(op, event_data).unwrap();
 
-        // Evaluate predicate on aggregation function result
-        let ident = get_aggreage_assert_ident(&p.aggregates[0].rule).unwrap();
-        let mut aggregate_env = BTreeMap::new();
-        aggregate_env.insert(ident, aggregation_result);
+    let mut single_window_eval = true;
 
-        let pred = &p.aggregates[0].rule[0].conj[0].preds[0];
-        agg_pred_result = eval_pred(pred, &aggregate_env);
+    if window_eval_flag && p.aggregates.is_empty() {
+        let windows = eval_window_rule(p.window_rule.clone().unwrap(), input.clone(), 2 as usize);
+        if windows.is_empty() {
+            single_window_eval = false;
+        }
     }
 
-    return filter_result && agg_pred_result;
+    if window_eval_flag && !p.aggregates.is_empty() {
+        let ident = get_aggreage_assert_ident(&p.aggregates[0].rule).unwrap();
+        let aggregate = &p.aggregates[0];
+        let op = get_aggreage_assert_op(&p.aggregates[0].rule).unwrap();
+        let pred = &p.aggregates[0].rule[0].conj[0].preds[0];
+        let mut aggregate_env: BTreeMap<String, Term> = BTreeMap::new();
+        //let window_rule = p.window_rule.clone().unwrap();
+
+        let windows = eval_window_rule(p.window_rule.clone().unwrap(), input.clone(), 2 as usize);
+
+        //  let window_pred_result = eval_pred(pred, &aggreate_env);
+
+        agg_pred_result = windows.into_iter().all(|window| {
+            let mut data = Vec::new();
+
+            for e in window {
+                let env = type_input(e, schema);
+                if eval_filter_dnf(dnf_filter, &env) {
+                    collect_event_data(&env, &aggregate.ident, &mut data);
+                }
+            }
+            let Some(agg_value) = eval_agg_data(op.clone(), data) else {
+                return false;
+            };
+            let mut aggregate_env = BTreeMap::new();
+            aggregate_env.insert(ident.clone(), agg_value);
+
+            eval_pred(pred, &aggregate_env)
+        });
+    } else {
+        if p.aggregates.len() != 0 {
+            let op = get_aggreage_assert_op(&p.aggregates[0].rule).unwrap();
+            let aggregation_result = eval_agg_data(op, event_data).unwrap();
+
+            // Evaluate predicate on aggregation function result
+            let ident = get_aggreage_assert_ident(&p.aggregates[0].rule).unwrap();
+            let mut aggregate_env = BTreeMap::new();
+            aggregate_env.insert(ident, aggregation_result);
+
+            let pred = &p.aggregates[0].rule[0].conj[0].preds[0];
+            agg_pred_result = eval_pred(pred, &aggregate_env);
+        }
+    }
+
+    return filter_result && agg_pred_result && single_window_eval;
 }
 
 pub fn collect_event_data(event: &BTreeMap<String, Term>, ident: &String, out: &mut Vec<Term>) {
     if let Some(t) = event.get(ident) {
         out.push(t.clone());
     }
+}
+
+pub fn flatten_window(windows: Vec<Vec<Event>>) -> Vec<Vec<Term>> {
+    let mut flatted_windows = Vec::new();
+
+    for w in windows {
+        let mut window = Vec::new();
+        for e in w {
+            window.extend(e.data);
+        }
+        flatted_windows.push(window);
+    }
+    return flatted_windows;
 }
 
 pub fn eval_window_rule(w: Window, mut events: Vec<Event>, utc_pos: usize) -> Vec<Vec<Event>> {
@@ -157,18 +208,18 @@ pub fn get_time_window_ms(time_unit: TimeUnit, w_width: Term) -> i64 {
     match w_width {
         Term::Int(i) => match time_unit {
             TimeUnit::MS => i as i64,
-            TimeUnit::S => (i / 1000) as i64,
-            TimeUnit::MIN => (60 * i / 1000) as i64,
-            TimeUnit::H => (60 * 60 * i / 1000) as i64,
-            TimeUnit::D => (24 * 60 * 60 * i / 1000) as i64,
+            TimeUnit::S => (i * 1000) as i64,
+            TimeUnit::MIN => (60 * i * 1000) as i64,
+            TimeUnit::H => (60 * 60 * i * 1000) as i64,
+            TimeUnit::D => (24 * 60 * 60 * i * 1000) as i64,
             _ => unimplemented!("Please choose a supported time unit: MS, S, MIN, H, D"),
         },
         Term::Float(f) => match time_unit {
             TimeUnit::MS => f as i64,
-            TimeUnit::S => (f / 1000.0) as i64,
-            TimeUnit::MIN => (60_f64 * f / 1000.0) as i64,
-            TimeUnit::H => (60.0 * 60.0 * f / 1000.0) as i64,
-            TimeUnit::D => (24.0 * 60.0 * 60.0 * f / 1000.0) as i64,
+            TimeUnit::S => (f * 1000.0) as i64,
+            TimeUnit::MIN => (60_f64 * f * 1000.0) as i64,
+            TimeUnit::H => (60.0 * 60.0 * f * 1000.0) as i64,
+            TimeUnit::D => (24.0 * 60.0 * 60.0 * f * 1000.0) as i64,
             _ => unimplemented!("Please choose a supported time unit: MS, S, MIN, H, D"),
         },
         _ => unimplemented!("Only Int or Float a valid types to specify the TimeWindow!"),

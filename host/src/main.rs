@@ -14,7 +14,7 @@ use crate::predata_processor::create_events_indexes;
 fn main() {
     // Prepare AST based on source and pest parsing => Input for evaluation
 
-    let file_str = fs::read_to_string(r"/mnt/c/Users/Lucas/Desktop/dsl_example/dnf_example/dnf_pest_parser/evaluator_program/host/src/example_vw_event_data_small.json").unwrap();
+    let file_str = fs::read_to_string(r"/mnt/c/Users/Lucas/Desktop/dsl_example/dnf_example/dnf_pest_parser/evaluator_program/host/src/example_vw_event_data_window_test.json").unwrap();
     let file_bytes = file_str.as_bytes();
     let file_len: u32 = file_bytes.len().try_into().unwrap();
 
@@ -24,7 +24,8 @@ fn main() {
     // Note: the IDENTIFIER (e.g. dataFieldName) must exactly match the identifier used in the original JSON
     let source = r#"CREATE SCHEMA VehicleData (dataFieldName string, value float, timestampUtc string);
                           assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage");
-                          assert VehicleData #win: count (4); "#;
+                          assert VehicleData #win:count(2); 
+                          assert (SUM(value) >= 30.0 AND SUM(value) < 120.0); "#;
     // Make also sure the value comparing against has same data type as defined in the SCHEMA.
 
     let dnf = parser::parse_source(&source);
