@@ -1,6 +1,6 @@
 program = {SOI ~ epl ~  EOI  }
 
-epl = _{schema ~ assert_rule ~ window_rule? ~ aggregate_rule* }
+epl = _{schema ~ assert_rule ~ window_rule? ~ pattern_rule? ~ aggregate_rule* }
 schema = {"CREATE" ~ "SCHEMA" ~ Ident ~ "("~ attribute_list? ~ ")" ~ ";"}
 
 attribute_list = {attribute ~ ("," ~ attribute)*}
@@ -10,6 +10,10 @@ attribute = {Ident ~ Type}
 assert_rule = {"assert" ~ quantifier ~ Ident ~ "(" ~ dnf_statement ~ ")" ~ ";"}
 
 window_rule = {"assert" ~ Ident ~ "#win:" ~ (TimeWindow | CountWindow) ~ ";"}
+
+pattern_rule = {"assert" ~ "PATTERN" ~ "(" ~ ident_atom ~  ( "->" ~ ident_atom )+ ~ ")" ~ ";"}
+
+ident_atom = { Ident  ~ "(" ~ dnf_statement ~ ")"}
 
 TimeWindow = {"time" ~ "(" ~ (Float | Int) ~ TimeUnit ~ ")"}
 

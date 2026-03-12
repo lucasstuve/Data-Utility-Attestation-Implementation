@@ -2,10 +2,12 @@
 
 //use std::sync::mpsc::RecvTimeoutError;
 
+use std::collections::linked_list;
+
 use dnf_core::ast::{Conjunction, Disjunction, Operator, Pred, Term};
 use dnf_core::epl::{
-    AggOperation, Aggregate, AssertRule, Attribute, AttributeList, CountWindow, Itype, ProgramAst,
-    Quantifier, Schema, TimeUnit, TimeWindow, Window,
+    AggOperation, Aggregate, AssertRule, Attribute, AttributeList, CountWindow, Itype, PatternRule,
+    ProgramAst, Quantifier, Schema, TimeUnit, TimeWindow, Window,
 };
 use pest::Parser;
 use pest_derive::Parser;
@@ -33,12 +35,14 @@ fn build_program(program: pest::iterators::Pair<Rule>) -> ProgramAst {
     let mut assert_rules = Vec::new();
     let mut aggregates = Vec::new(); //TODO can be changed into a simple Predicate (lower effort in evaluation).
     let mut window_rule = None;
+    let mut pattern_rule: Option<PatternRule> = None;
 
     for p in program.into_inner() {
         match p.as_rule() {
             Rule::schema => schemas.push(create_schema(p)),
             Rule::assert_rule => assert_rules.push(create_assert_rule(p)),
             Rule::aggregate_rule => aggregates.push(create_aggregate_assert_rule(p)),
+            Rule::pattern_rule => pattern_rule = create_pattern_rule(p),
             Rule::window_rule => {
                 window_rule = Some(create_window(p));
             }
@@ -52,6 +56,7 @@ fn build_program(program: pest::iterators::Pair<Rule>) -> ProgramAst {
         assert_rules,
         aggregates,
         window_rule,
+        pattern_rule,
     };
 }
 
@@ -94,6 +99,32 @@ fn build_time_unit(pair: pest::iterators::Pair<Rule>) -> TimeUnit {
         "h" => TimeUnit::H,
         "d" => TimeUnit::D,
         _ => unreachable!("Not a supported time unit. Only (ms, s, min, h, d)"),
+    }
+}
+
+fn create_pattern_rule(pair: pest::iterators::Pair<Rule>) -> Option<PatternRule> {
+    let mut links: Vec<Disjunction> = Vec::new();
+    let mut ident: String = "".into();
+
+    for ident_atom in pair.into_inner() {
+        let mut atom_inner = ident_atom.into_inner();
+        ident = String::from(atom_inner.next().unwrap().as_str());
+
+        let dnf = atom_inner.next().unwrap();
+        let dis = dnf.into_inner().next().unwrap();
+
+        links.push(build_disjunction(dis));
+    }
+
+    return Some(PatternRule {
+        identifier: ident,
+        pattern_sequence: links,
+    });
+}
+fn ident_to_string(ident: Term) -> String {
+    match ident {
+        Term::Ident(s) => s,
+        _ => unimplemented!("Function implemented for Ident::Str(s) to String."),
     }
 }
 

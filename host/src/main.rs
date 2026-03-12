@@ -24,8 +24,7 @@ fn main() {
     // Note: the IDENTIFIER (e.g. dataFieldName) must exactly match the identifier used in the original JSON
     let source = r#"CREATE SCHEMA VehicleData (dataFieldName string, value float, timestampUtc string);
                           assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage");
-                          assert VehicleData #win:count(2); 
-                          assert (SUM(value) >= 30.0 AND SUM(value) < 120.0); "#;
+                          assert PATTERN (VehicleData(value == 10.0) -> VehicleData(dataFieldName == "profiles.targetSOCPercentage") -> VehicleData(value == 30.0)); "#;
     // Make also sure the value comparing against has same data type as defined in the SCHEMA.
 
     let dnf = parser::parse_source(&source);

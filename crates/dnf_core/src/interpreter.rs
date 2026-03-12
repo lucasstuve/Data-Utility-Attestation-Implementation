@@ -1,9 +1,11 @@
 use crate::ast::{Conjunction, Disjunction, Operator, Pred, Term};
-use crate::epl::{AggOperation, ProgramAst, Quantifier, Schema, TimeUnit, TimeWindow, Window};
+use crate::epl::{
+    AggOperation, PatternRule, ProgramAst, Quantifier, Schema, TimeUnit, TimeWindow, Window,
+};
 extern crate alloc;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use chrono::{DateTime, FixedOffset, NaiveDateTime, Timelike, Utc};
-use libm::sqrt;
+use libm::{nextafter, sqrt};
 
 pub type Env = BTreeMap<String, Term>;
 
@@ -42,7 +44,23 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
         }
     }
 
-    //TODO: Implement the interpreter for the Window-Rule/s
+    let mut pattern_result = true;
+    //let mut env: BTreeMap<String, Term> = BTreeMap::new();
+    // PATTERN evaluation:
+    if p.pattern_rule != None {
+        let mut event_envs: Vec<BTreeMap<String, Term>> = Vec::new();
+        for e in &input {
+            event_envs.push(type_input(
+                Event {
+                    data: e.data.clone(),
+                },
+                schema,
+            ));
+        }
+
+        pattern_result = eval_pattern_rule(event_envs, p.pattern_rule);
+    }
+
     let mut window_eval_flag: bool = p.window_rule.is_some();
 
     // Collect the event data that passes the filter criteria
@@ -60,11 +78,11 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
         }
     }
 
-    let mut agg_pred_result = true;
+    let mut agg_pred_result = false;
 
     // Compute aggregate on filtered data
 
-    let mut single_window_eval = true;
+    let mut single_window_eval = false;
 
     if window_eval_flag && p.aggregates.is_empty() {
         let windows = eval_window_rule(p.window_rule.clone().unwrap(), input.clone(), 2 as usize);
@@ -117,13 +135,27 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
         }
     }
 
-    return filter_result && agg_pred_result && single_window_eval;
+    return filter_result && ((agg_pred_result && single_window_eval) || pattern_result);
 }
 
 pub fn collect_event_data(event: &BTreeMap<String, Term>, ident: &String, out: &mut Vec<Term>) {
     if let Some(t) = event.get(ident) {
         out.push(t.clone());
     }
+}
+
+pub fn eval_pattern_rule(events: Vec<BTreeMap<String, Term>>, p_rule: Option<PatternRule>) -> bool {
+    let pattern_rule = p_rule.unwrap();
+    let pattern = pattern_rule.pattern_sequence;
+
+    return events.windows(pattern.len()).any(|sequence| {
+        sequence
+            .iter()
+            .zip(pattern.iter())
+            .all(|(event_env, disj)| {
+                return eval_disj(disj, event_env);
+            })
+    });
 }
 
 pub fn flatten_window(windows: Vec<Vec<Event>>) -> Vec<Vec<Term>> {

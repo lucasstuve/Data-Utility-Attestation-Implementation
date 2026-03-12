@@ -1,6 +1,10 @@
-use core::fmt;
 extern crate alloc;
+
+use alloc::vec;
+
+use crate::ast::Conjunction;
 use crate::ast::Disjunction;
+use crate::ast::Pred;
 use crate::ast::Term;
 
 use alloc::{string::String, vec::Vec};
@@ -12,9 +16,35 @@ use serde::{Deserialize, Serialize};
 pub struct ProgramAst {
     pub schemas: Vec<Schema>,
     pub assert_rules: Vec<AssertRule>,
+    pub pattern_rule: Option<PatternRule>,
     pub aggregates: Vec<AssertRule>,
     pub window_rule: Option<Window>,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+
+pub struct PatternRule {
+    pub pattern_sequence: Vec<Disjunction>,
+    pub identifier: String,
+}
+
+impl PatternRule {
+    pub fn new() -> PatternRule {
+        return PatternRule {
+            pattern_sequence: vec![Disjunction {
+                conj: vec![Conjunction {
+                    preds: vec![Pred {
+                        lhs: Term::Int(3),
+                        rhs: Term::Int(34),
+                        op: crate::ast::Operator::Gr,
+                    }],
+                }],
+            }],
+            identifier: "Test_Pattern_Rule".into(),
+        };
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Aggregate {
     pub ident: String,
