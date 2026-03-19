@@ -11,7 +11,7 @@ use dnf_core::epl::{
 };
 use pest::Parser;
 use pest_derive::Parser;
-use risc0_zkvm_platform::syscall::bigint::WIDTH_WORDS;
+//use risc0_zkvm_platform::syscall::bigint::WIDTH_WORDS;
 
 #[derive(Parser)]
 //#[grammar = "grammar.pest"]

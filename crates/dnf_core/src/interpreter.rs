@@ -4,8 +4,8 @@ use crate::epl::{
 };
 extern crate alloc;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
-use chrono::{DateTime, FixedOffset, NaiveDateTime, Timelike, Utc};
-use libm::{nextafter, sqrt};
+use chrono::{DateTime, FixedOffset};
+use libm::sqrt;
 
 pub type Env = BTreeMap<String, Term>;
 
@@ -15,6 +15,11 @@ pub struct Event {
 }
 
 pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
+    let has_assrt = !&p.assert_rules.is_empty();
+    let has_patt = !(p.pattern_rule == None);
+    let has_aggr: bool = !&p.aggregates.is_empty();
+    let has_wind: bool = !(p.window_rule == None);
+
     let schema = &p.schemas[0];
     //let mut event_data: Vec<Term> = Vec::new();
     let mut filter_result = true;
@@ -82,13 +87,11 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
 
     // Compute aggregate on filtered data
 
-    let mut single_window_eval = false;
+    let mut single_window_eval: bool = false;
 
     if window_eval_flag && p.aggregates.is_empty() {
         let windows = eval_window_rule(p.window_rule.clone().unwrap(), input.clone(), 2 as usize);
-        if windows.is_empty() {
-            single_window_eval = false;
-        }
+        single_window_eval = !windows.is_empty();
     }
 
     if window_eval_flag && !p.aggregates.is_empty() {
@@ -135,7 +138,21 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
         }
     }
 
-    return filter_result && ((agg_pred_result && single_window_eval) || pattern_result);
+    if !has_aggr && has_assrt && !has_patt && !has_wind {
+        return filter_result;
+    } else if has_aggr && has_assrt && !has_patt && !has_wind {
+        return filter_result && agg_pred_result;
+    } else if !has_aggr && has_assrt && !has_patt && has_wind {
+        return filter_result && single_window_eval;
+    } else if has_aggr && has_assrt && !has_patt && has_wind {
+        return filter_result && agg_pred_result;
+    } else if !has_aggr && has_assrt && has_patt && !has_wind {
+        return filter_result && pattern_result;
+    } else {
+        return false;
+    }
+
+    //  return filter_result && ((agg_pred_result && single_window_eval) || pattern_result);
 }
 
 pub fn collect_event_data(event: &BTreeMap<String, Term>, ident: &String, out: &mut Vec<Term>) {

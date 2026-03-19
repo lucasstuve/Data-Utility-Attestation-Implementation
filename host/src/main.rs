@@ -15,16 +15,18 @@ fn main() {
     // Prepare AST based on source and pest parsing => Input for evaluation
 
     let file_str = fs::read_to_string(r"/mnt/c/Users/Lucas/Desktop/dsl_example/dnf_example/dnf_pest_parser/evaluator_program/host/src/example_vw_event_data_window_test.json").unwrap();
-    let file_bytes = file_str.as_bytes();
+    let file_bytes = file_str.as_bytes(); //host\src\example_vw_event_data_window_test.json
     let file_len: u32 = file_bytes.len().try_into().unwrap();
+
+    //let signed_data = sha2::Sha256::digest(file_bytes);
 
     let index_list = create_events_indexes(file_str.as_str());
 
     // Example user defined query string, first defining the data extraction than ASSERT a rule.
     // Note: the IDENTIFIER (e.g. dataFieldName) must exactly match the identifier used in the original JSON
-    let source = r#"CREATE SCHEMA VehicleData (dataFieldName string, value float, timestampUtc string);
-                          assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage");
-                          assert PATTERN (VehicleData(value == 10.0) -> VehicleData(dataFieldName == "profiles.targetSOCPercentage") -> VehicleData(value == 30.0)); "#;
+    let source = r#"CREATE SCHEMA VehicleData (dataFieldName string, value int);
+                          assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value < 50); 
+                          assert PATTERN(VehicleData(value == 20) -> VehicleData(value ==30)); "#;
     // Make also sure the value comparing against has same data type as defined in the SCHEMA.
 
     let dnf = parser::parse_source(&source);
