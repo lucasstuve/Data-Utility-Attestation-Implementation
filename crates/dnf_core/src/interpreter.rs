@@ -1,6 +1,7 @@
 use crate::ast::{Conjunction, Disjunction, Operator, Pred, Term};
 use crate::epl::{
-    AggOperation, PatternRule, ProgramAst, Quantifier, Schema, TimeUnit, TimeWindow, Window,
+    AggOperation, PatternRule, ProgramAst, Quantifier, Schema, Session, TimeUnit, TimeWindow,
+    Window,
 };
 extern crate alloc;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
@@ -15,10 +16,13 @@ pub struct Event {
 }
 
 pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
-    let has_assrt = !&p.assert_rules.is_empty();
-    let has_patt = !(p.pattern_rule == None);
+    let has_assrt: bool = !&p.assert_rules.is_empty();
+    let has_patt: bool = !(p.pattern_rule == None);
     let has_aggr: bool = !&p.aggregates.is_empty();
     let has_wind: bool = !(p.window_rule == None);
+    let has_session: bool = !(p.session == None);
+
+    let mut session_result: bool = false;
 
     let schema = &p.schemas[0];
     //let mut event_data: Vec<Term> = Vec::new();
@@ -47,6 +51,20 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
                 eval_filter_dnf(&r.rule, &env)
             });
         }
+    }
+
+    if has_session {
+        let mut events_envs: Vec<BTreeMap<String, Term>> = Vec::new();
+        for e in &input {
+            events_envs.push(type_input(
+                Event {
+                    data: e.data.clone(),
+                },
+                schema,
+            ));
+        }
+
+        session_result = eval_session(events_envs, p.session);
     }
 
     let mut pattern_result = true;
@@ -138,8 +156,8 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
         }
     }
 
-    if !has_aggr && has_assrt && !has_patt && !has_wind {
-        return filter_result;
+    if !has_aggr && has_assrt && !has_patt && !has_wind && has_session {
+        return filter_result && session_result;
     } else if has_aggr && has_assrt && !has_patt && !has_wind {
         return filter_result && agg_pred_result;
     } else if !has_aggr && has_assrt && !has_patt && has_wind {
@@ -148,17 +166,41 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
         return filter_result && agg_pred_result;
     } else if !has_aggr && has_assrt && has_patt && !has_wind {
         return filter_result && pattern_result;
+    } else if !has_aggr && has_assrt && !has_patt && !has_wind && !has_session {
+        return filter_result;
     } else {
         return false;
     }
-
-    //  return filter_result && ((agg_pred_result && single_window_eval) || pattern_result);
 }
 
 pub fn collect_event_data(event: &BTreeMap<String, Term>, ident: &String, out: &mut Vec<Term>) {
     if let Some(t) = event.get(ident) {
         out.push(t.clone());
     }
+}
+
+pub fn eval_session(events: Vec<BTreeMap<String, Term>>, session_def: Option<Session>) -> bool {
+    let session = session_def.unwrap();
+    let sequence = session.session_sequence;
+
+    let mut seq_counter = 0;
+
+    for event in events {
+        if seq_counter > 0 && eval_disj(&sequence[0], &event) {
+            seq_counter = 1;
+            continue;
+        }
+
+        if eval_disj(&sequence[seq_counter], &event) {
+            seq_counter = seq_counter + 1;
+
+            if seq_counter == sequence.len() {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 pub fn eval_pattern_rule(events: Vec<BTreeMap<String, Term>>, p_rule: Option<PatternRule>) -> bool {
@@ -208,14 +250,7 @@ pub fn eval_window_rule(w: Window, mut events: Vec<Event>, utc_pos: usize) -> Ve
                 .into_iter()
                 .map(|e| {
                     let dt = match &e.data[utc_pos] {
-                        Term::Str(s) => {
-                            /*  NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
-                            .unwrap_or_else(|err| {
-                                panic!("Timestamp not valid!{:?}, {:?}", s, err)
-                            })
-                            .and_utc() */
-                            DateTime::parse_from_rfc3339(s).unwrap()
-                        }
+                        Term::Str(s) => DateTime::parse_from_rfc3339(s).unwrap(),
                         _ => panic!("Expected (TimeStampFormat might vary) string"),
                     };
                     (e, dt)

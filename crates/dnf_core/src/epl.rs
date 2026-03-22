@@ -19,10 +19,16 @@ pub struct ProgramAst {
     pub pattern_rule: Option<PatternRule>,
     pub aggregates: Vec<AssertRule>,
     pub window_rule: Option<Window>,
+    pub session: Option<Session>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Session {
+    pub identifier: String,
+    pub session_sequence: Vec<Disjunction>,
+}
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PatternRule {
     pub pattern_sequence: Vec<Disjunction>,
     pub identifier: String,

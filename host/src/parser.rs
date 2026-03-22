@@ -7,10 +7,11 @@ use std::collections::linked_list;
 use dnf_core::ast::{Conjunction, Disjunction, Operator, Pred, Term};
 use dnf_core::epl::{
     AggOperation, Aggregate, AssertRule, Attribute, AttributeList, CountWindow, Itype, PatternRule,
-    ProgramAst, Quantifier, Schema, TimeUnit, TimeWindow, Window,
+    ProgramAst, Quantifier, Schema, Session, TimeUnit, TimeWindow, Window,
 };
 use pest::Parser;
 use pest_derive::Parser;
+use rustyline::completion::Pair;
 //use risc0_zkvm_platform::syscall::bigint::WIDTH_WORDS;
 
 #[derive(Parser)]
@@ -36,6 +37,7 @@ fn build_program(program: pest::iterators::Pair<Rule>) -> ProgramAst {
     let mut aggregates = Vec::new(); //TODO can be changed into a simple Predicate (lower effort in evaluation).
     let mut window_rule = None;
     let mut pattern_rule: Option<PatternRule> = None;
+    let mut session: Option<Session> = None;
 
     for p in program.into_inner() {
         match p.as_rule() {
@@ -46,6 +48,7 @@ fn build_program(program: pest::iterators::Pair<Rule>) -> ProgramAst {
             Rule::window_rule => {
                 window_rule = Some(create_window(p));
             }
+            Rule::session => session = Some(create_session(p)),
             Rule::EOI => {}
             _ => {}
         }
@@ -57,6 +60,43 @@ fn build_program(program: pest::iterators::Pair<Rule>) -> ProgramAst {
         aggregates,
         window_rule,
         pattern_rule,
+        session,
+    };
+}
+
+fn create_session(pair: pest::iterators::Pair<Rule>) -> Session {
+    let mut sequence: Vec<Disjunction> = Vec::new();
+
+    let mut it = pair.into_inner();
+    let start_end_rule = it.next().unwrap();
+    let mut inner = start_end_rule.into_inner();
+
+    let start_ident = inner.next().unwrap();
+    let mut ident = start_ident.as_str();
+    let start_dnf = inner.next().unwrap();
+    let start_dis = start_dnf.into_inner().next().unwrap();
+    let dis_s = build_disjunction(start_dis);
+    sequence.push(dis_s);
+
+    let end_dnf = inner.next_back().unwrap();
+    let end_ident = inner.next_back().unwrap();
+    let end_dis = end_dnf.into_inner().next().unwrap();
+    let dis_e = build_disjunction(end_dis);
+
+    for ident_atom in inner {
+        let mut atom_inner = ident_atom.into_inner();
+        ident = atom_inner.next().unwrap().as_str();
+
+        let dnf = atom_inner.next().unwrap();
+        let dis = dnf.into_inner().next().unwrap();
+
+        sequence.push(build_disjunction(dis));
+    }
+
+    sequence.push(dis_e);
+    return Session {
+        identifier: String::from(ident),
+        session_sequence: sequence,
     };
 }
 
