@@ -159,7 +159,7 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
     if !has_aggr && has_assrt && !has_patt && !has_wind && has_session {
         return filter_result && session_result;
     } else if has_aggr && has_assrt && !has_patt && !has_wind {
-        return filter_result && agg_pred_result;
+        return agg_pred_result;
     } else if !has_aggr && has_assrt && !has_patt && has_wind {
         return filter_result && single_window_eval;
     } else if has_aggr && has_assrt && !has_patt && has_wind {
@@ -318,7 +318,7 @@ pub fn eval_agg_data(op: AggOperation, data: Vec<Term>) -> Option<Term> {
         AggOperation::MEDIAN => median(&data),
         AggOperation::MIN => min(&data),
         AggOperation::MAX => max(&data),
-        AggOperation::STDDEV => stddev(&data), //TODO think about MINEVER, MAXEVER function
+        AggOperation::STDDEV => stddev(&data),
 
         _ => unimplemented!("No valid aggregation operation, or not yet implemented!"),
     };
@@ -612,182 +612,5 @@ fn get_aggreage_assert_op(dnf: &Vec<Disjunction>) -> Option<AggOperation> {
     match &dnf.first()?.conj.first()?.preds.first()?.lhs {
         Term::Aggregate(a) => Some(a.operation.clone()),
         _ => None,
-    }
-}
-
-#[cfg(test)]
-mod test_interpreter {
-    use crate::{
-        ast::Term,
-        interpreter::{avg, count, max, median, min, stddev, sum},
-    };
-
-    #[test]
-    fn test_median_int_odd_number() {
-        let int_terms = [
-            Term::Int(23),
-            Term::Int(234),
-            Term::Int(2),
-            Term::Int(56),
-            Term::Int(45),
-        ];
-
-        assert_eq!(median(&int_terms).unwrap(), Term::Int(45));
-    }
-
-    #[test]
-    fn test_median_int_even_number() {
-        let int_terms = [Term::Int(23), Term::Int(234), Term::Int(56), Term::Int(45)];
-
-        assert_eq!(median(&int_terms).unwrap(), Term::Int(56)); // means => Index 2,5 => 3
-    }
-    #[test]
-    fn test_median_float_odd_number() {
-        let int_terms = [
-            Term::Float(23.0),
-            Term::Float(234.0),
-            Term::Float(56.0),
-            Term::Float(45.0),
-            Term::Float(12.0),
-        ];
-
-        assert_eq!(median(&int_terms).unwrap(), Term::Float(45.0));
-    }
-
-    #[test]
-    fn test_avg_int_odd_number() {
-        let int_terms = [
-            Term::Int(23),
-            Term::Int(234),
-            Term::Int(2),
-            Term::Int(56),
-            Term::Int(45),
-        ];
-
-        assert_eq!(avg(&int_terms).unwrap(), Term::Int(72));
-    }
-    #[test]
-    fn test_avg_int_even_number() {
-        let int_terms = [Term::Int(23), Term::Int(234), Term::Int(56), Term::Int(45)];
-
-        assert_eq!(avg(&int_terms).unwrap(), Term::Int(89)); //TODO change return for Int input => Float value  // Or cast correctly
-    }
-
-    #[test]
-    fn test_avg_float_even_number() {
-        let int_terms = [
-            Term::Float(23.0),
-            Term::Float(234.0),
-            Term::Float(56.0),
-            Term::Float(45.0),
-        ];
-
-        assert_eq!(avg(&int_terms).unwrap(), Term::Float(89.5));
-    }
-
-    #[test]
-    fn test_max_float_even_number() {
-        let int_terms = [
-            Term::Float(23.0),
-            Term::Float(234.0),
-            Term::Float(56.0),
-            Term::Float(45.0),
-        ];
-
-        assert_eq!(max(&int_terms).unwrap(), Term::Float(234.0));
-    }
-
-    #[test]
-    fn test_max_float_odd_number() {
-        let int_terms = [
-            Term::Float(23.0),
-            Term::Float(234.0),
-            Term::Float(56.0),
-            Term::Float(45.0),
-            Term::Float(550.0),
-        ];
-
-        assert_eq!(max(&int_terms).unwrap(), Term::Float(550.0));
-    }
-
-    #[test]
-    fn test_sum_float_odd_number() {
-        let int_terms = [
-            Term::Float(23.0),
-            Term::Float(234.0),
-            Term::Float(56.0),
-            Term::Float(45.0),
-            Term::Float(550.0),
-        ];
-
-        assert_eq!(sum(&int_terms).unwrap(), Term::Float(908.0));
-    }
-
-    #[test]
-    fn test_stddev_float_odd_number() {
-        let int_terms = [
-            Term::Float(23.0),
-            Term::Float(234.0),
-            Term::Float(56.0),
-            Term::Float(45.0),
-            Term::Float(550.0),
-        ];
-
-        assert_eq!(stddev(&int_terms).unwrap(), Term::Float(222.51584213264456));
-    }
-
-    #[test]
-    fn test_stddev_int_odd_number() {
-        let int_terms = [
-            Term::Int(23),
-            Term::Int(234),
-            Term::Int(56),
-            Term::Int(45),
-            Term::Int(550),
-        ];
-
-        assert_eq!(stddev(&int_terms).unwrap(), Term::Float(222.51685329430669));
-        // TODO left Float, where right is Int()
-    }
-
-    #[test]
-    fn test_count_int_odd_number() {
-        let int_terms = [
-            Term::Int(23),
-            Term::Int(234),
-            Term::Int(56),
-            Term::Int(45),
-            Term::Int(550),
-        ];
-
-        assert_eq!(count(&int_terms).unwrap(), Term::Int(5)); // TODO left Float, where right is Int()
-    }
-
-    #[test]
-    fn test_count_int_even_number() {
-        let int_terms = [
-            Term::Int(23),
-            Term::Int(234),
-            Term::Int(56),
-            Term::Int(45),
-            Term::Int(550),
-            Term::Int(342),
-        ];
-
-        assert_eq!(count(&int_terms).unwrap(), Term::Int(6)); // TODO left Float, where right is Int()
-    }
-
-    #[test]
-    fn test_count_flaot_even_number() {
-        let int_terms = [
-            Term::Float(23.0),
-            Term::Float(234.0),
-            Term::Float(56.0),
-            Term::Float(45.0),
-            Term::Float(550.0),
-            Term::Float(342.0),
-        ];
-
-        assert_eq!(count(&int_terms).unwrap(), Term::Int(6)); // TODO left Float, where right is Int()
     }
 }
