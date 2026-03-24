@@ -550,7 +550,7 @@ fn resolve_term(t: &Term, env: &Env) -> Option<Term> {
     }
 }
 
-fn eval_pred(p: &Pred, env: &Env) -> bool {
+pub fn eval_pred(p: &Pred, env: &Env) -> bool {
     let lhs = match resolve_term(&p.lhs, env) {
         Some(v) => v,
         None => return false, // Variable nicht gesetzt
@@ -570,7 +570,7 @@ fn eval_pred(p: &Pred, env: &Env) -> bool {
         _ => false,
     }
 }
-fn operator_to_function<T: PartialEq + PartialOrd>(op: Operator) -> fn(a: T, b: T) -> bool {
+pub fn operator_to_function<T: PartialEq + PartialOrd>(op: Operator) -> fn(a: T, b: T) -> bool {
     match op {
         Operator::Eq => |a, b| a == b,
         Operator::NEq => |a, b| a != b,
@@ -578,26 +578,6 @@ fn operator_to_function<T: PartialEq + PartialOrd>(op: Operator) -> fn(a: T, b: 
         Operator::GrEq => |a, b| a >= b,
         Operator::Sm => |a, b| a < b,
         Operator::SmEq => |a, b| a <= b,
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::ast::{Operator, Pred, Term};
-
-    #[test]
-    fn test_eval_pred_ident_number() {
-        let mut env: Env = BTreeMap::new();
-        env.insert("MyValue".into(), Term::Int(11));
-
-        let p = Pred {
-            lhs: Term::Ident("MyValue".into()),
-            rhs: Term::Int(10),
-            op: Operator::Gr,
-        };
-
-        assert_eq!(eval_pred(&p, &env), true);
     }
 }
 

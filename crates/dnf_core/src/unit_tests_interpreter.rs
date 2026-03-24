@@ -2,13 +2,15 @@
 mod interpreter_tests {
     extern crate alloc;
     use core::time;
+    use std::collections::BTreeMap;
+    use std::vec;
 
-    use crate::ast::*;
     use crate::epl::{
         AggOperation, Aggregate, AssertRule, Attribute, AttributeList, CountWindow, Itype,
-        PatternRule, ProgramAst, Quantifier, Schema, TimeUnit, TimeWindow, Window,
+        PatternRule, ProgramAst, Quantifier, Schema, Session, TimeUnit, TimeWindow, Window,
     };
     use crate::interpreter::*;
+    use crate::{ast::*, interpreter};
     use alloc::{string::String, vec::Vec};
 
     //TODO Test eval_program
@@ -67,6 +69,32 @@ mod interpreter_tests {
     }
     fn count_window_builder(t: u64) -> Window {
         return Window::CountWindow(CountWindow { w_width: t });
+    }
+
+    #[test]
+    fn test_eval_pred_01() {
+        let mut env: BTreeMap<_, _> = BTreeMap::new();
+        env.insert("op".into(), Term::Bool(true));
+        let pred = Pred {
+            lhs: Term::Bool(true),
+            op: Operator::Eq,
+            rhs: Term::Ident("op".into()),
+        };
+
+        assert_eq!(eval_pred(&pred, &env), true);
+    }
+
+    #[test]
+    fn test_eval_pred_02() {
+        let mut env: BTreeMap<_, _> = BTreeMap::new();
+        env.insert("op".into(), Term::Str("str".into()));
+        let pred = Pred {
+            lhs: Term::Str("str".into()),
+            op: Operator::Eq,
+            rhs: Term::Ident("op".into()),
+        };
+
+        assert_eq!(eval_pred(&pred, &env), true);
     }
 
     #[test]
@@ -779,6 +807,210 @@ mod interpreter_tests {
     }
 
     #[test]
+    fn test_assert_all_Gr_aggregate_min_01() {
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::MIN
+                    }),
+                    Operator::Eq,
+                    Term::Int(30)
+                )
+            ])],)],
+        };
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Int(10));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: None,
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![Term::Str("id_001".into()), Term::Int(30)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_002".into()), Term::Int(50)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_002".into()), Term::Int(60)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_003".into()), Term::Int(64)]
+            },
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_Gr_aggregate_min_02() {
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Float)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::MIN
+                    }),
+                    Operator::Eq,
+                    Term::Float(30.0)
+                )
+            ])],)],
+        };
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Float(10.0));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: None,
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![Term::Str("id_001".into()), Term::Float(30.0)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_002".into()), Term::Float(50.0)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_002".into()), Term::Float(60.0)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_003".into()), Term::Float(64.0)]
+            },
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_gr_aggregate_max_01() {
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::MAX
+                    }),
+                    Operator::Eq,
+                    Term::Int(64)
+                )
+            ])],)],
+        };
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Int(10));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: None,
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![Term::Str("id_001".into()), Term::Int(30)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_002".into()), Term::Int(50)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_002".into()), Term::Int(60)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_003".into()), Term::Int(64)]
+            },
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_Gr_aggregate_max_02() {
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Float)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::MAX
+                    }),
+                    Operator::Eq,
+                    Term::Float(64.0)
+                )
+            ])],)],
+        };
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Float(10.0));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: None,
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![Term::Str("id_001".into()), Term::Float(30.0)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_002".into()), Term::Float(50.0)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_002".into()), Term::Float(60.0)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_003".into()), Term::Float(64.0)]
+            },
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
     fn test_assert_all_gr_aggregate_avg_01() {
         let attribute_list =
             alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
@@ -932,6 +1164,92 @@ mod interpreter_tests {
     }
 
     #[test]
+    #[should_panic]
+    fn test_assert_all_gr_aggregate_avg_05() {
+        let attribute_list = alloc::vec![
+            ("id".into(), Itype::String),
+            ("speed".into(), Itype::String)
+        ];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::AVG
+                    }),
+                    Operator::Eq,
+                    Term::Float(0.0) // should be 133.333... (400/3)
+                )
+            ])],)],
+        };
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(
+            Term::Ident("speed".into()),
+            Operator::Gr,
+            Term::Str("34.3".into()),
+        );
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: None,
+            session: None,
+        };
+
+        let input_events = alloc::vec![];
+
+        assert_eq!(eval_program(ast, input_events), false);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_assert_all_gr_aggregate_avg_04() {
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Float)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::AVG
+                    }),
+                    Operator::Eq,
+                    Term::Float(0.0) // should be 133.333... (400/3)
+                )
+            ])],)],
+        };
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Float(30.0));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: None,
+            session: None,
+        };
+
+        let input_events = alloc::vec![Event {
+            data: alloc::vec![Term::Str("id_002".into()), Term::Str("60.0".into())]
+        }];
+
+        assert_eq!(eval_program(ast, input_events), false);
+    }
+
+    #[test]
     fn test_assert_all_gr_aggregate_median_01() {
         let attribute_list =
             alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Float)];
@@ -1033,6 +1351,60 @@ mod interpreter_tests {
             },
             Event {
                 data: alloc::vec![Term::Str("id_003".into()), Term::Int(90)]
+            },
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_gr_aggregate_stddev_01() {
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Float)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::STDDEV
+                    }),
+                    Operator::Eq,
+                    Term::Float(111.93748255164576)
+                )
+            ])],)],
+        };
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Float(20.0));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: None,
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![Term::Str("id_001".into()), Term::Float(30.0)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_002".into()), Term::Float(300.0)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_002".into()), Term::Float(60.0)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_003".into()), Term::Float(40.0)]
+            },
+            Event {
+                data: alloc::vec![Term::Str("id_003".into()), Term::Float(90.0)]
             },
         ];
 
@@ -1379,23 +1751,851 @@ mod interpreter_tests {
                 data: alloc::vec![
                     Term::Str("id_003".into()),
                     Term::Int(60),
-                    Term::Str("2026-03-23T10:00:05+00:00".into())
+                    Term::Str("2026-03-23T10:00:03+00:00".into())
                 ]
             },
             Event {
                 data: alloc::vec![
                     Term::Str("id_004".into()),
                     Term::Int(40),
-                    Term::Str("2026-03-23T10:00:10+00:00".into())
+                    Term::Str("2026-03-23T10:00:05+00:00".into())
                 ]
             },
             Event {
                 data: alloc::vec![
                     Term::Str("id_005".into()),
                     Term::Int(90),
-                    Term::Str("2026-03-23T10:00:11+00:00".into())
+                    Term::Str("2026-03-23T10:00:06+00:00".into())
                 ]
             },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_006".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:07+00:00".into())
+                ]
+            },
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_gr_window_time_aggregate_03() {
+        let window = time_window_builder(Term::Int(2), TimeUnit::S);
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::COUNT
+                    }),
+                    Operator::Eq,
+                    Term::Int(2)
+                )
+            ])],)],
+        };
+
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Int(20));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: Some(window),
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_001".into()),
+                    Term::Int(30),
+                    Term::Str("2026-03-23T10:00:00+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_002".into()),
+                    Term::Int(300),
+                    Term::Str("2026-03-23T10:00:01+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_003".into()),
+                    Term::Int(60),
+                    Term::Str("2026-03-23T10:00:02+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_004".into()),
+                    Term::Int(40),
+                    Term::Str("2026-03-23T10:00:03+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_005".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:04+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_006".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:05+00:00".into())
+                ]
+            }
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_gr_window_time_aggregate_04() {
+        let window = time_window_builder(Term::Float(2.0), TimeUnit::H);
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::COUNT
+                    }),
+                    Operator::Eq,
+                    Term::Int(6)
+                )
+            ])],)],
+        };
+
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Int(20));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: Some(window),
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_001".into()),
+                    Term::Int(30),
+                    Term::Str("2026-03-23T10:00:00+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_002".into()),
+                    Term::Int(300),
+                    Term::Str("2026-03-23T10:00:01+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_003".into()),
+                    Term::Int(60),
+                    Term::Str("2026-03-23T10:00:02+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_004".into()),
+                    Term::Int(40),
+                    Term::Str("2026-03-23T10:00:03+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_005".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:04+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_006".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:05+00:00".into())
+                ]
+            }
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_gr_window_time_aggregate_06() {
+        let window = time_window_builder(Term::Float(2.0), TimeUnit::MIN);
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::COUNT
+                    }),
+                    Operator::Eq,
+                    Term::Int(6)
+                )
+            ])],)],
+        };
+
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Int(20));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: Some(window),
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_001".into()),
+                    Term::Int(30),
+                    Term::Str("2026-03-23T10:00:00+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_002".into()),
+                    Term::Int(300),
+                    Term::Str("2026-03-23T10:00:01+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_003".into()),
+                    Term::Int(60),
+                    Term::Str("2026-03-23T10:00:02+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_004".into()),
+                    Term::Int(40),
+                    Term::Str("2026-03-23T10:00:03+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_005".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:04+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_006".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:05+00:00".into())
+                ]
+            }
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_gr_window_time_aggregate_07() {
+        let window = time_window_builder(Term::Float(2.0), TimeUnit::D);
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::COUNT
+                    }),
+                    Operator::Eq,
+                    Term::Int(6)
+                )
+            ])],)],
+        };
+
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Int(20));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: Some(window),
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_001".into()),
+                    Term::Int(30),
+                    Term::Str("2026-03-23T10:00:00+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_002".into()),
+                    Term::Int(300),
+                    Term::Str("2026-03-23T10:00:01+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_003".into()),
+                    Term::Int(60),
+                    Term::Str("2026-03-23T10:00:02+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_004".into()),
+                    Term::Int(40),
+                    Term::Str("2026-03-23T10:00:03+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_005".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:04+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_006".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:05+00:00".into())
+                ]
+            }
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_gr_window_time_aggregate_08() {
+        let window = time_window_builder(Term::Float(6000.0), TimeUnit::MS);
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::COUNT
+                    }),
+                    Operator::Eq,
+                    Term::Int(6)
+                )
+            ])],)],
+        };
+
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Int(20));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: Some(window),
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_001".into()),
+                    Term::Int(30),
+                    Term::Str("2026-03-23T10:00:00+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_002".into()),
+                    Term::Int(300),
+                    Term::Str("2026-03-23T10:00:01+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_003".into()),
+                    Term::Int(60),
+                    Term::Str("2026-03-23T10:00:02+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_004".into()),
+                    Term::Int(40),
+                    Term::Str("2026-03-23T10:00:03+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_005".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:04+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_006".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:05+00:00".into())
+                ]
+            }
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_gr_window_time_aggregate_09() {
+        let window = time_window_builder(Term::Int(2), TimeUnit::MIN);
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::COUNT
+                    }),
+                    Operator::Eq,
+                    Term::Int(6)
+                )
+            ])],)],
+        };
+
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Int(20));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: Some(window),
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_001".into()),
+                    Term::Int(30),
+                    Term::Str("2026-03-23T10:00:00+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_002".into()),
+                    Term::Int(300),
+                    Term::Str("2026-03-23T10:00:01+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_003".into()),
+                    Term::Int(60),
+                    Term::Str("2026-03-23T10:00:02+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_004".into()),
+                    Term::Int(40),
+                    Term::Str("2026-03-23T10:00:03+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_005".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:04+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_006".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:05+00:00".into())
+                ]
+            }
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_gr_window_time_aggregate_10() {
+        let window = time_window_builder(Term::Int(1), TimeUnit::D);
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
+
+        let aggregation = AssertRule {
+            quantifier: Quantifier::ALL,
+            ident: "speed".into(),
+            rule: alloc::vec![disj_builder(alloc::vec![conj_builder(alloc::vec![
+                pred_builder(
+                    Term::Aggregate(Aggregate {
+                        ident: "speed".into(),
+                        operation: AggOperation::COUNT
+                    }),
+                    Operator::Eq,
+                    Term::Int(6)
+                )
+            ])],)],
+        };
+
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Int(20));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![aggregation],
+            window_rule: Some(window),
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_001".into()),
+                    Term::Int(30),
+                    Term::Str("2026-03-23T10:00:00+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_002".into()),
+                    Term::Int(300),
+                    Term::Str("2026-03-23T10:00:01+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_003".into()),
+                    Term::Int(60),
+                    Term::Str("2026-03-23T10:00:02+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_004".into()),
+                    Term::Int(40),
+                    Term::Str("2026-03-23T10:00:03+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_005".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:04+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_006".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:05+00:00".into())
+                ]
+            }
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_gr_pattern_01() {
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
+
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Int(20));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+
+        let pred_1 = pred_builder(Term::Ident("speed".into()), Operator::Eq, Term::Int(30));
+        let pred_2 = pred_builder(Term::Ident("speed".into()), Operator::Eq, Term::Int(300));
+        let conj_2 = conj_builder(alloc::vec![pred_1]);
+        let conj_3 = conj_builder(alloc::vec![pred_2]);
+        let disj = disj_builder(alloc::vec![conj_2, conj_3]);
+
+        let pattern = pattern_rule_builder(alloc::vec![disj], "Event".into());
+
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: Some(pattern),
+            aggregates: alloc::vec![],
+            window_rule: None,
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_001".into()),
+                    Term::Int(30),
+                    Term::Str("2026-03-23T10:00:00+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_002".into()),
+                    Term::Int(300),
+                    Term::Str("2026-03-23T10:00:01+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_003".into()),
+                    Term::Int(60),
+                    Term::Str("2026-03-23T10:00:02+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_004".into()),
+                    Term::Int(40),
+                    Term::Str("2026-03-23T10:00:03+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_005".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:04+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_006".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:05+00:00".into())
+                ]
+            }
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_gr_pattern_02() {
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
+
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Int(20));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+
+        let pred_1 = pred_builder(Term::Ident("speed".into()), Operator::Eq, Term::Int(30));
+        let pred_2 = pred_builder(Term::Ident("speed".into()), Operator::SmEq, Term::Int(300));
+        let conj_2 = conj_builder(alloc::vec![pred_1]);
+        let conj_3 = conj_builder(alloc::vec![pred_2]);
+        let disj = disj_builder(alloc::vec![conj_2, conj_3]);
+
+        let pattern = pattern_rule_builder(alloc::vec![disj], "Event".into());
+
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: Some(pattern),
+            aggregates: alloc::vec![],
+            window_rule: None,
+            session: None,
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_001".into()),
+                    Term::Int(30),
+                    Term::Str("2026-03-23T10:00:00+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_002".into()),
+                    Term::Int(300),
+                    Term::Str("2026-03-23T10:00:01+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_003".into()),
+                    Term::Int(60),
+                    Term::Str("2026-03-23T10:00:02+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_004".into()),
+                    Term::Int(40),
+                    Term::Str("2026-03-23T10:00:03+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_005".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:04+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_006".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:05+00:00".into())
+                ]
+            }
+        ];
+
+        assert_eq!(eval_program(ast, input_events), true);
+    }
+
+    #[test]
+    fn test_assert_all_gr_session_01() {
+        let attribute_list =
+            alloc::vec![("id".into(), Itype::String), ("speed".into(), Itype::Int)];
+
+        let schema = schema_builder("Event".into(), attribute_list_builder(attribute_list));
+        let pred = pred_builder(Term::Ident("speed".into()), Operator::Gr, Term::Int(20));
+        let conj = conj_builder(alloc::vec![pred]);
+        let disj = disj_builder(alloc::vec![conj]);
+        let assert_rule = assert_rule_builder(Quantifier::ALL, "speed".into(), alloc::vec![disj]);
+
+        let pred_1 = pred_builder(Term::Ident("speed".into()), Operator::Eq, Term::Int(30));
+        let pred_2 = pred_builder(Term::Ident("speed".into()), Operator::Eq, Term::Int(60));
+        let conj_2 = conj_builder(alloc::vec![pred_1]);
+        let conj_3 = conj_builder(alloc::vec![pred_2]);
+        let disj = disj_builder(alloc::vec![conj_2, conj_3]);
+
+        //let pattern = pattern_rule_builder(alloc::vec![disj], "Event".into());
+
+        let session = Session {
+            identifier: "Event".into(),
+            session_sequence: alloc::vec![disj],
+        };
+
+        let ast = ProgramAst {
+            schemas: alloc::vec![schema],
+            assert_rules: alloc::vec![assert_rule],
+            pattern_rule: None,
+            aggregates: alloc::vec![],
+            window_rule: None,
+            session: Some(session),
+        };
+
+        let input_events = alloc::vec![
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_001".into()),
+                    Term::Int(30),
+                    Term::Str("2026-03-23T10:00:00+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_002".into()),
+                    Term::Int(300),
+                    Term::Str("2026-03-23T10:00:01+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_003".into()),
+                    Term::Int(60),
+                    Term::Str("2026-03-23T10:00:02+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_004".into()),
+                    Term::Int(40),
+                    Term::Str("2026-03-23T10:00:03+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_005".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:04+00:00".into())
+                ]
+            },
+            Event {
+                data: alloc::vec![
+                    Term::Str("id_006".into()),
+                    Term::Int(90),
+                    Term::Str("2026-03-23T10:00:05+00:00".into())
+                ]
+            }
         ];
 
         assert_eq!(eval_program(ast, input_events), true);
@@ -1569,5 +2769,37 @@ mod interpreter_tests {
         ];
 
         assert_eq!(count(&int_terms).unwrap(), Term::Int(6)); // TODO left Float, where right is Int()
+    }
+
+    #[test]
+    pub fn operator_to_function_neq() {
+        let f = operator_to_function(Operator::NEq);
+        assert_eq!(f(5, 6), true);
+        assert_ne!(f(3, 3), true)
+    }
+
+    #[test]
+    pub fn operator_to_function_gr() {
+        let f = operator_to_function(Operator::Gr);
+        assert_eq!(f(7, 6), true);
+        assert_ne!(f(3, 3), true);
+    }
+    #[test]
+    pub fn operator_to_function_greq() {
+        let f = operator_to_function(Operator::GrEq);
+        assert_eq!(f(7, 6), true);
+        assert_ne!(f(3, 3), false);
+    }
+    #[test]
+    pub fn operator_to_function_sm() {
+        let f = operator_to_function(Operator::Sm);
+        assert_eq!(f(2, 6), true);
+        assert_ne!(f(3, 3), true);
+    }
+    #[test]
+    pub fn operator_to_function_smeq() {
+        let f = operator_to_function(Operator::SmEq);
+        assert_eq!(f(2, 6), true);
+        assert_ne!(f(3, 3), false);
     }
 }
