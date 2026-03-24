@@ -7,7 +7,7 @@ use alloc::vec::Vec;
 
 use dnf_core::{
     epl::ProgramAst,
-    input_extractor::{extract_events, grap_event_string},
+    input_extractor::{efficient_event_extraction, extract_events, grap_event_string},
     interpreter::{eval_program, Event},
 };
 
@@ -33,7 +33,7 @@ fn main() {
     let byte_slice = bytes.as_slice();
 
     for index in index_list {
-        events.push(extract_events(
+        events.push(efficient_event_extraction(
             schema0.clone(),
             grap_event_string(index, byte_slice).as_bytes(),
         ));

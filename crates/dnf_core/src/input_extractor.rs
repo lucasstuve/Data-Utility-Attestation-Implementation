@@ -1,6 +1,7 @@
 use crate::ast::Term;
 use crate::epl::{Attribute, AttributeList, Itype, Schema};
 use crate::interpreter::Event;
+use core::str::*;
 extern crate alloc;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -57,30 +58,45 @@ pub fn grap_event_string<'a>(indexes: (u32, u32), bytes: &'a [u8]) -> &'a str {
 }
 
 //TODO implement more efficient data extraction based on byte,string evaluation.
-/*
 
-pub fn extract_value_as_str(event_str: [u8], key: &[u8]) -> &str {
-    let start = event_str.to_string.find(key)? + key.iter().len();
-    let rest = event_str[start..];
-    let end = rest.find('"');
+pub fn efficient_event_extraction(schema: Schema, raw_event: &[u8]) -> Event {
+    let attributes = schema.attribute_list.list;
+    let mut e_data = Vec::new();
+    for a in attributes {
+        let start = &raw_event
+            .windows(a.ident.len())
+            .position(|w| w == a.ident.as_bytes())
+            .unwrap()
+            + 3 as usize
+            + a.ident.len();
+        let end = &raw_event[start..]
+            .iter()
+            .position(|&e| e == b'"')
+            .expect("Closing delimmiter not found.");
 
-    return rest[..end].to_string();
+        let abs_end = end + start;
+        let attr_parsed = bytes_to_term(a.i_type, &raw_event[start..abs_end]);
+        e_data.push(attr_parsed);
+    }
+
+    return Event { data: e_data };
 }
 
-pub fn cast_string_to_typed_term(value_str: &str, t: &Itype) -> Term {
-    match t {
-        Itype::Bool => Term::Bool(value_str.parse().unwrap()),
-        Itype::Float => Term::Number(value_str.parse().unwrap()),
-        Itype::String => Term::Str(value_str.parse().unwrap()),
-        Itype::Int => Term::Number(value_str.parse().unwrap()),
+// event String: "{"key":"4b26efad-ee19-305a-add0-a7a422d4e719","dataFieldName":"profiles.targetSOCPercentage","value":"30","timestampUtc":"2025-12-18T16:45:03.484Z"}"
+
+pub fn bytes_to_term(itype: Itype, b: &[u8]) -> Term {
+    let s = core::str::from_utf8(&b).unwrap();
+
+    match itype {
+        Itype::Bool => Term::Bool(s.parse::<bool>().unwrap()),
+        Itype::Float => Term::Float(s.parse::<f64>().unwrap()),
+        Itype::Int => Term::Int(s.parse::<i64>().unwrap()),
+        Itype::String => Term::Str(s.parse::<String>().unwrap()),
     }
 }
 
-*/
-
-/*
 #[cfg(test)]
-mod test {
+mod extract_events_test {
     use super::*;
     extern crate std;
     use std::println;
@@ -120,4 +136,94 @@ mod test {
         assert_eq!(event.data.len(), 2);
     }
 }
-*/
+
+#[cfg(test)]
+mod efficient_event_extraction_test {
+    use super::*;
+    extern crate std;
+
+    #[test]
+    pub fn test_event_01() {
+        let mut attribute_list = Vec::new();
+        let a1: Attribute = Attribute {
+            ident: "dataFieldName".into(),
+            i_type: Itype::String,
+        };
+        let a2: Attribute = Attribute {
+            ident: "value".into(),
+            i_type: Itype::Int,
+        };
+
+        attribute_list.push(a1);
+        attribute_list.push(a2);
+
+        let s: Schema = Schema {
+            ident: "VehicleData".into(),
+            attribute_list: AttributeList {
+                list: attribute_list,
+            },
+        };
+
+        let example_input = br#"{"key":"c161867b-0566-3cc8-9f60-989848640bcc","dataFieldName":"profiles.targetSOCPercentage","value":"80","timestampUtc":"2025-12-18T16:45:03.484Z"}"#;
+
+        let expected_event = Event {
+            data: alloc::vec![
+                Term::Str("profiles.targetSOCPercentage".into()),
+                Term::Int(80)
+            ],
+        };
+
+        let result_event = efficient_event_extraction(s, example_input);
+
+        assert_eq!(expected_event == result_event, true);
+    }
+
+    #[test]
+    pub fn test_event_02() {
+        let mut attribute_list = Vec::new();
+        let a1: Attribute = Attribute {
+            ident: "dataFieldName".into(),
+            i_type: Itype::String,
+        };
+        let a2: Attribute = Attribute {
+            ident: "value".into(),
+            i_type: Itype::Int,
+        };
+        let a3: Attribute = Attribute {
+            ident: "key".into(),
+            i_type: Itype::String,
+        };
+
+        let a4: Attribute = Attribute {
+            ident: "timestampUtc".into(),
+            i_type: Itype::String,
+        };
+
+        attribute_list.push(a1);
+        attribute_list.push(a2);
+        attribute_list.push(a3);
+        attribute_list.push(a4);
+
+        let s: Schema = Schema {
+            ident: "VehicleData".into(),
+            attribute_list: AttributeList {
+                list: attribute_list,
+            },
+        };
+
+        let example_input = br#"{"key":"c161867b-0566-3cc8-9f60-989848640bcc","dataFieldName":"profiles.targetSOCPercentage","value":"80","timestampUtc":"2025-12-18T16:45:03.484Z"}"#;
+
+        let expected_event = Event {
+            data: alloc::vec![
+                Term::Str("profiles.targetSOCPercentage".into()),
+                Term::Int(80),
+                Term::Str("c161867b-0566-3cc8-9f60-989848640bcc".into()),
+                Term::Str("2025-12-18T16:45:03.484Z".into())
+            ],
+        };
+
+        let result_event = efficient_event_extraction(s, example_input);
+
+        assert_eq!(expected_event == result_event, true);
+    }
+}
