@@ -22,9 +22,25 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
     let has_wind: bool = !(p.window_rule == None);
     let has_session: bool = !(p.session == None);
 
+    let dnf_filter = &p.assert_rules[0].rule;
+
     let mut session_result: bool = false;
 
+     let mut aggregation_result = Term::Int(5); //TODO fix later, just placeholder to mitigate "possibly uninitialized"
+
+   
+    
     let schema = &p.schemas[0];
+    let mapping = mapping_from_schema(schema); 
+
+   let mut event_data = Vec::new();
+    for e in &input {
+        if (&p.aggregates.len() > &(0 as usize)) && eval_filter_dnf(dnf_filter, &mapping, &e) {
+           event_data.push(e.clone()); 
+        }
+    }
+
+    
     //let mut event_data: Vec<Term> = Vec::new();
     let mut filter_result = true;
 
@@ -32,74 +48,33 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
     for r in &p.assert_rules {
         if r.quantifier == Quantifier::ALL {
             filter_result = input.iter().all(|e| {
-                let env = type_input(
-                    Event {
-                        data: e.data.clone(),
-                    },
-                    schema,
-                );
-                eval_filter_dnf(&r.rule, &env)
+
+                eval_filter_dnf(&r.rule, &mapping, &e)
             });
         } else if r.quantifier == Quantifier::ANY {
             filter_result = input.iter().any(|e| {
-                let env = type_input(
-                    Event {
-                        data: e.data.clone(),
-                    },
-                    schema,
-                );
-                eval_filter_dnf(&r.rule, &env)
+                eval_filter_dnf(&r.rule, &mapping, &e)
             });
         }
     }
 
     if has_session {
-        let mut events_envs: Vec<BTreeMap<String, Term>> = Vec::new();
-        for e in &input {
-            events_envs.push(type_input(
-                Event {
-                    data: e.data.clone(),
-                },
-                schema,
-            ));
-        }
 
-        session_result = eval_session(events_envs, p.session);
+        session_result = eval_session(  event_data.clone() , &mapping, p.session);
     }
 
     let mut pattern_result = true;
     //let mut env: BTreeMap<String, Term> = BTreeMap::new();
     // PATTERN evaluation:
     if p.pattern_rule != None {
-        let mut event_envs: Vec<BTreeMap<String, Term>> = Vec::new();
-        for e in &input {
-            event_envs.push(type_input(
-                Event {
-                    data: e.data.clone(),
-                },
-                schema,
-            ));
-        }
-
-        pattern_result = eval_pattern_rule(event_envs, p.pattern_rule);
+        pattern_result = eval_pattern_rule(event_data.clone(), &mapping, p.pattern_rule);
     }
 
     let mut window_eval_flag: bool = p.window_rule.is_some();
 
     // Collect the event data that passes the filter criteria
-    let dnf_filter = &p.assert_rules[0].rule;
-    let mut event_data = Vec::new();
-    for e in &input {
-        let env = type_input(
-            Event {
-                data: e.data.clone(),
-            },
-            schema,
-        );
-        if (&p.aggregates.len() > &(0 as usize)) && eval_filter_dnf(dnf_filter, &env) {
-            collect_event_data(&env, &p.aggregates[0].ident, &mut event_data);
-        }
-    }
+    
+
 
     let mut agg_pred_result = false;
 
@@ -117,42 +92,43 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
         let aggregate = &p.aggregates[0];
         let op = get_aggreage_assert_op(&p.aggregates[0].rule).unwrap();
         let pred = &p.aggregates[0].rule[0].conj[0].preds[0];
-        let mut aggregate_env: BTreeMap<String, Term> = BTreeMap::new();
         //let window_rule = p.window_rule.clone().unwrap();
 
         let windows = eval_window_rule(p.window_rule.clone().unwrap(), input.clone(), 2 as usize);
 
         //  let window_pred_result = eval_pred(pred, &aggreate_env);
-
+       
         agg_pred_result = windows.into_iter().all(|window| {
             let mut data = Vec::new();
 
             for e in window {
-                let env = type_input(e, schema);
-                if eval_filter_dnf(dnf_filter, &env) {
-                    collect_event_data(&env, &aggregate.ident, &mut data);
+                if eval_filter_dnf(dnf_filter, &mapping, &e) {
+                for ev in e.data {
+                         data.push(ev); 
+                } 
+                  
                 }
             }
             let Some(agg_value) = eval_agg_data(op.clone(), data) else {
                 return false;
             };
-            let mut aggregate_env = BTreeMap::new();
-            aggregate_env.insert(ident.clone(), agg_value);
-
-            eval_pred(pred, &aggregate_env)
-        });
-    } else {
+            eval_pred(pred, &mapping, &Event{ data: alloc::vec![agg_value] })} ) ;
+    
         if p.aggregates.len() != 0 {
             let op = get_aggreage_assert_op(&p.aggregates[0].rule).unwrap();
-            let aggregation_result = eval_agg_data(op, event_data).unwrap();
+            
+            for e in event_data.clone() {
+               aggregation_result = eval_agg_data(op.clone(), e.data).unwrap();
 
+            } 
+            
             // Evaluate predicate on aggregation function result
             let ident = get_aggreage_assert_ident(&p.aggregates[0].rule).unwrap();
-            let mut aggregate_env = BTreeMap::new();
-            aggregate_env.insert(ident, aggregation_result);
+            //let mut aggregate_env = BTreeMap::new();
+             // aggregate_env.insert(ident, aggregation_result);
 
             let pred = &p.aggregates[0].rule[0].conj[0].preds[0];
-            agg_pred_result = eval_pred(pred, &aggregate_env);
+            agg_pred_result = eval_pred(pred, &mapping, &Event{data: alloc::vec![aggregation_result]});
         }
     }
 
@@ -173,25 +149,20 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
     }
 }
 
-pub fn collect_event_data(event: &BTreeMap<String, Term>, ident: &String, out: &mut Vec<Term>) {
-    if let Some(t) = event.get(ident) {
-        out.push(t.clone());
-    }
-}
 
-pub fn eval_session(events: Vec<BTreeMap<String, Term>>, session_def: Option<Session>) -> bool {
+pub fn eval_session(events: Vec<Event>, mapping: &BTreeMap<String, usize>, session_def: Option<Session>) -> bool {
     let session = session_def.unwrap();
     let sequence = session.session_sequence;
 
     let mut seq_counter = 0;
 
     for event in events {
-        if seq_counter > 0 && eval_disj(&sequence[0], &event) {
+        if seq_counter > 0 && eval_disj(&sequence[0], &mapping, &event) {
             seq_counter = 1;
             continue;
         }
 
-        if eval_disj(&sequence[seq_counter], &event) {
+        if eval_disj(&sequence[seq_counter], &mapping, &event) {
             seq_counter = seq_counter + 1;
 
             if seq_counter == sequence.len() {
@@ -203,7 +174,7 @@ pub fn eval_session(events: Vec<BTreeMap<String, Term>>, session_def: Option<Ses
     return false;
 }
 
-pub fn eval_pattern_rule(events: Vec<BTreeMap<String, Term>>, p_rule: Option<PatternRule>) -> bool {
+pub fn eval_pattern_rule(events: Vec<Event>, mapping: &BTreeMap<String, usize>, p_rule: Option<PatternRule>) -> bool {
     let pattern_rule = p_rule.unwrap();
     let pattern = pattern_rule.pattern_sequence;
 
@@ -211,8 +182,8 @@ pub fn eval_pattern_rule(events: Vec<BTreeMap<String, Term>>, p_rule: Option<Pat
         sequence
             .iter()
             .zip(pattern.iter())
-            .all(|(event_env, disj)| {
-                return eval_disj(disj, event_env);
+            .all(|(event, disj)| {
+                return eval_disj(disj, &mapping, event);
             })
     });
 }
@@ -515,47 +486,64 @@ pub fn type_input(e: Event, s: &Schema) -> BTreeMap<String, Term> {
     return data_args;
 }
 
-pub fn eval_filter_dnf(dis: &Vec<Disjunction>, env: &Env) -> bool {
+pub fn mapping_from_schema (s:&Schema) -> BTreeMap<String, usize>{
+    let mut mapping: BTreeMap<String, usize>= BTreeMap::new(); 
+    let mut counter = 0; 
+
+    for attr in s.attribute_list.list.iter(){
+        mapping.insert(attr.ident.clone(), counter); 
+        counter = counter +1; 
+    }
+    return mapping; 
+}
+
+
+pub fn eval_filter_dnf(dis: &Vec<Disjunction>, mapping: &BTreeMap<String, usize>, event: &Event) -> bool {
     let mut result = false;
 
     for d in dis {
-        result = result || eval_disj(&d, env);
+        result = result || eval_disj(&d, mapping, event);
     }
 
     return result;
 }
 
-fn eval_disj(dis: &Disjunction, env: &Env) -> bool {
+fn eval_disj(dis: &Disjunction, mapping: &BTreeMap<String, usize>, event: &Event) -> bool {
     let mut result = false;
     for c in &dis.conj {
-        result = result || eval_conj(&c, env);
+        result = result || eval_conj(&c, &mapping, &event);
     }
     return result;
 }
 
-fn eval_conj(conj: &Conjunction, env: &Env) -> bool {
+fn eval_conj(conj: &Conjunction,  mapping: &BTreeMap<String, usize>, event: &Event) -> bool {
     let mut result = true;
 
     for pred in &conj.preds {
-        result = result && eval_pred(&pred, env);
+        result = result && eval_pred(&pred, &mapping, &event);
     }
     return result;
 }
 
-fn resolve_term(t: &Term, env: &Env) -> Option<Term> {
+fn resolve_term(t: &Term,  mapping: &BTreeMap<String, usize>, event: &Event)  -> Option<Term> {
     match t {
-        Term::Ident(name) => env.get(name).cloned(),
-        Term::Aggregate(a) => env.get(&a.ident).cloned(),
+        Term::Ident(name) => {
+            let index = *mapping.get(name)?; 
+             Some(event.data[index].clone())
+        }, 
+        Term::Aggregate(a) =>  { let index = *mapping.get(&a.ident)?; 
+             Some(event.data[index].clone()) }, 
         _ => Some(t.clone()),
     }
 }
 
-pub fn eval_pred(p: &Pred, env: &Env) -> bool {
-    let lhs = match resolve_term(&p.lhs, env) {
+
+pub fn eval_pred(p: &Pred, env: &BTreeMap<String, usize>, event: &Event) -> bool {
+    let lhs = match resolve_term(&p.lhs, env, event) {
         Some(v) => v,
         None => return false, // Variable nicht gesetzt
     };
-    let rhs = match resolve_term(&p.rhs, env) {
+    let rhs = match resolve_term(&p.rhs, env, event) {
         Some(v) => v,
         None => return false,
     };
