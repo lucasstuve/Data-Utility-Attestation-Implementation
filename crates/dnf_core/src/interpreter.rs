@@ -15,7 +15,7 @@ pub struct Event {
     pub data: Vec<Term>,
 }
 
-pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
+pub fn eval_program(p: &ProgramAst, input: &Vec<Event>) -> bool {
     let has_assrt: bool = !&p.assert_rules.is_empty();
     let has_patt: bool = !(p.pattern_rule == None);
     let has_aggr: bool = !&p.aggregates.is_empty();
@@ -27,10 +27,10 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
     let mut session_result: bool = false;
 
     let schema = &p.schemas[0];
-    let mapping = mapping_from_schema(schema);
+    let mapping = mapping_from_schema(&schema);
 
     let mut event_data = Vec::new();
-    for e in &input {
+    for e in input.iter() {
         if eval_filter_dnf(dnf_filter, &mapping, &e) {
             event_data.push(e.clone());
         }
@@ -51,14 +51,14 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
     }
 
     if has_session {
-        session_result = eval_session(event_data.clone(), &mapping, p.session);
+        session_result = eval_session(&event_data, &mapping, &p.session);
     }
 
     let mut pattern_result = true;
 
     // PATTERN evaluation:
     if p.pattern_rule != None {
-        pattern_result = eval_pattern_rule(event_data.clone(), &mapping, p.pattern_rule);
+        pattern_result = eval_pattern_rule(&event_data, &mapping, &p.pattern_rule);
     }
 
     let window_eval_flag: bool = p.window_rule.is_some();
@@ -73,9 +73,9 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
 
     if window_eval_flag && p.aggregates.is_empty() {
         let windows = eval_window_rule(
-            p.window_rule.clone().unwrap(),
+            &p.window_rule.as_ref().unwrap(),
             event_data.clone(),
-            2 as usize,
+            &2usize,
         );
         single_window_eval = !windows.is_empty();
     }
@@ -88,11 +88,7 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
         let pred = &p.aggregates[0].rule[0].conj[0].preds[0];
         //let window_rule = p.window_rule.clone().unwrap();
 
-        let windows = eval_window_rule(
-            p.window_rule.clone().unwrap(),
-            event_data.clone(),
-            2 as usize,
-        );
+        let windows = eval_window_rule(&p.window_rule.as_ref().unwrap(), event_data, &2usize);
 
         //  let window_pred_result = eval_pred(pred, &aggreate_env);
 
@@ -104,7 +100,7 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
             for e in window {
                 data.push(e.data[mapped_index].clone());
             }
-            let Some(agg_value) = eval_agg_data(op.clone(), data) else {
+            let Some(agg_value) = eval_agg_data(&op, &data) else {
                 return false;
             };
             let mut e_data = alloc::vec![Term::Int(0); mapping.len()];
@@ -123,7 +119,7 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
             data.push(e.data[mapped_index].clone());
         }
 
-        let Some(aggregation_result) = eval_agg_data(op, data) else {
+        let Some(aggregation_result) = eval_agg_data(&op, &data) else {
             return false;
         };
 
@@ -152,12 +148,12 @@ pub fn eval_program(p: ProgramAst, input: Vec<Event>) -> bool {
 }
 
 pub fn eval_session(
-    events: Vec<Event>,
+    events: &Vec<Event>,
     mapping: &BTreeMap<String, usize>,
-    session_def: Option<Session>,
+    session_def: &Option<Session>,
 ) -> bool {
-    let session = session_def.unwrap();
-    let sequence = session.session_sequence;
+    let session = session_def.as_ref().unwrap();
+    let sequence = &session.session_sequence;
 
     let mut seq_counter = 0;
 
@@ -180,12 +176,12 @@ pub fn eval_session(
 }
 
 pub fn eval_pattern_rule(
-    events: Vec<Event>,
+    events: &Vec<Event>,
     mapping: &BTreeMap<String, usize>,
-    p_rule: Option<PatternRule>,
+    p_rule: &Option<PatternRule>,
 ) -> bool {
-    let pattern_rule = p_rule.unwrap();
-    let pattern = pattern_rule.pattern_sequence;
+    let pattern_rule = p_rule.as_ref().unwrap();
+    let pattern = &pattern_rule.pattern_sequence;
 
     return events.windows(pattern.len()).any(|sequence| {
         sequence.iter().zip(pattern.iter()).all(|(event, disj)| {
@@ -194,39 +190,39 @@ pub fn eval_pattern_rule(
     });
 }
 
-pub fn flatten_window(windows: Vec<Vec<Event>>) -> Vec<Vec<Term>> {
+pub fn flatten_window(windows: &Vec<Vec<Event>>) -> Vec<Vec<Term>> {
     let mut flatted_windows = Vec::new();
 
     for w in windows {
         let mut window = Vec::new();
         for e in w {
-            window.extend(e.data);
+            window.extend(e.data.clone());
         }
         flatted_windows.push(window);
     }
     return flatted_windows;
 }
 
-pub fn eval_window_rule(w: Window, mut events: Vec<Event>, utc_pos: usize) -> Vec<Vec<Event>> {
+pub fn eval_window_rule(w: &Window, mut events: Vec<Event>, utc_pos: &usize) -> Vec<Vec<Event>> {
     match w {
         Window::CountWindow(count_win) => {
             let mut c_windows = Vec::new();
 
             while events.len() >= count_win.w_width as usize {
-                let rest = events.split_off(count_win.w_width as usize);
+                let rest = events.split_off(count_win.w_width as usize).clone();
 
-                c_windows.push(events);
+                c_windows.push(events.clone());
                 events = rest;
             }
 
             return c_windows;
         }
         Window::TimeWindow(TimeWindow { time_unit, w_width }) => {
-            let window_in_ms = get_time_window_ms(time_unit, w_width);
+            let window_in_ms = get_time_window_ms(time_unit, w_width.clone());
             let mut tstemp_events: Vec<(Event, DateTime<FixedOffset>)> = events
                 .into_iter()
-                .map(|e| {
-                    let dt = match &e.data[utc_pos] {
+                .map(|e: Event| {
+                    let dt: DateTime<FixedOffset> = match &e.data[*utc_pos] {
                         Term::Str(s) => DateTime::parse_from_rfc3339(s).unwrap(),
                         _ => panic!("Expected (TimeStampFormat might vary) string"),
                     };
@@ -247,11 +243,11 @@ pub fn eval_window_rule(w: Window, mut events: Vec<Event>, utc_pos: usize) -> Ve
 
             for (e, d) in tstemp_events {
                 if d.timestamp_millis() < window_start + window_in_ms {
-                    window.push(e);
+                    window.push(e.clone());
                 } else {
                     win_vec.push(window.clone());
                     window.clear();
-                    window.push(e);
+                    window.push(e.clone());
                     window_start = d.timestamp_millis();
                 }
             }
@@ -265,7 +261,7 @@ pub fn eval_window_rule(w: Window, mut events: Vec<Event>, utc_pos: usize) -> Ve
     }
 }
 
-pub fn get_time_window_ms(time_unit: TimeUnit, w_width: Term) -> i64 {
+pub fn get_time_window_ms(time_unit: &TimeUnit, w_width: Term) -> i64 {
     match w_width {
         Term::Int(i) => match time_unit {
             TimeUnit::MS => i as i64,
@@ -285,7 +281,7 @@ pub fn get_time_window_ms(time_unit: TimeUnit, w_width: Term) -> i64 {
     }
 }
 
-pub fn eval_agg_data(op: AggOperation, data: Vec<Term>) -> Option<Term> {
+pub fn eval_agg_data(op: &AggOperation, data: &Vec<Term>) -> Option<Term> {
     let result = match op {
         AggOperation::AVG => avg(&data),
         AggOperation::COUNT => count(&data),
@@ -532,17 +528,21 @@ fn eval_conj(conj: &Conjunction, mapping: &BTreeMap<String, usize>, event: &Even
     return result;
 }
 
-fn resolve_term(t: &Term, mapping: &BTreeMap<String, usize>, event: &Event) -> Option<Term> {
+fn resolve_term<'k>(
+    t: &'k Term,
+    mapping: &'k BTreeMap<String, usize>,
+    event: &'k Event,
+) -> Option<&'k Term> {
     match t {
         Term::Ident(name) => {
             let index = *mapping.get(name)?;
-            Some(event.data[index].clone())
+            Some(&event.data[index])
         }
         Term::Aggregate(a) => {
             let index = *mapping.get(&a.ident)?;
-            Some(event.data[index].clone())
+            Some(&event.data[index])
         }
-        _ => Some(t.clone()),
+        _ => Some(t),
     }
 }
 
@@ -566,7 +566,7 @@ pub fn eval_pred(p: &Pred, env: &BTreeMap<String, usize>, event: &Event) -> bool
         _ => false,
     }
 }
-pub fn operator_to_function<T: PartialEq + PartialOrd>(op: Operator) -> fn(a: T, b: T) -> bool {
+pub fn operator_to_function<T: PartialEq + PartialOrd>(op: Operator) -> fn(a: &T, b: &T) -> bool {
     match op {
         Operator::Eq => |a, b| a == b,
         Operator::NEq => |a, b| a != b,

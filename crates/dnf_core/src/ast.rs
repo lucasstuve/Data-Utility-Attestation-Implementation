@@ -4,7 +4,6 @@ use core::fmt;
 
 extern crate alloc;
 use alloc::{string::String, vec::Vec};
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]

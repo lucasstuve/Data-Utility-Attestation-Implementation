@@ -8,15 +8,13 @@ path = "src/lib.rs"
 
 
 [dependencies]
+
 serde = { version = "1", default-features = false, features = [
     "derive",
     "alloc",
 ] }
 libm = "0.2"
 
-serde_json = { version = "1", default-features = false, features = ["alloc"] }
-chrono = { version = "0.4.44", default-features = false }
+#serde_json = { version = "1", default-features = false, features = ["alloc"] }
+chrono = { version = "0.4.44",  default-features = false, features = ["alloc"]}
 
-[[bin]]
-name = "input_extractor"
-path = "src/bin/input_extractor.rs"
