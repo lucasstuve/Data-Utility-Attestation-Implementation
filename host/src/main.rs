@@ -10,10 +10,13 @@ use predata_processor::create_events_indexes;
 use rand::rngs::OsRng;
 
 use risc0_zkvm::{default_prover, ExecutorEnv};
-use std::fs;
+use std::env;
+use std::fs::{self, File};
 
+use std::path::Path;
 use std::time::Instant;
 
+use benchmarks::performance_benchmarks::{write_results_csv, Row};
 use rsa::signature::{RandomizedSigner, SignatureEncoding};
 use rsa::{
     pkcs1::{EncodeRsaPrivateKey, EncodeRsaPublicKey, LineEnding},
@@ -23,9 +26,27 @@ use rsa::{
 use sha2::Sha256;
 
 fn main() {
+    //Read environment CLI args.
+    let file_name_arg = env::args()
+        .nth(1)
+        .expect("specify the file name --file_name.json");
+    let base = "benchmarks/test_data";
+    let base_path = Path::new(base).join(file_name_arg);
+    let path = base_path.to_str().unwrap();
+
+    let query_arg = env::args().nth(2).expect("Expected: entered query string!");
+
+    let out_file_arg = env::args().nth(3).expect("Specify the out put file here.");
+
+    // Set-up new performance measurement.
+    let mut bench: Row = Row::new();
+
     // Prepare AST based on source and pest parsing => Input for evaluation
     let mut rng = OsRng;
-    let file_str = fs::read_to_string(r"host/src/example_vw_event_data_window_test.json").unwrap();
+    let file_name = path; // r"host/src/example_vw_event_data_window_test.json";
+    let file_str = fs::read_to_string(file_name).unwrap();
+    let file = File::open(file_name).unwrap();
+    let file_size_bytes = file.metadata().unwrap().len();
     let file_bytes = file_str.as_bytes(); //host\src\example_vw_event_data_window_test.json
     let file_len: u32 = file_bytes.len().try_into().unwrap();
 
@@ -53,14 +74,14 @@ fn main() {
     let signature = singing_key.sign_with_rng(&mut rng, file_bytes).to_vec();
     let sig_length: u32 = signature.len().try_into().unwrap();
 
-    // Example user defined query string, first defining the data extraction than ASSERT a rule.
+    /* Example user defined query string, first defining the data extraction than ASSERT a rule.
     // Note: the IDENTIFIER (e.g. dataFieldName) must exactly match the identifier used in the original JSON
     let source = r#"CREATE SCHEMA VehicleData (dataFieldName string, value int);
-                          assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value < 50); 
+                          assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value < 50);
                           assert SESSION(VehicleData:start(value == 10) ->  VehicleData(value == 30) ->  VehicleData:end(value == 3) ); "#;
-    // Make also sure the value comparing against has same data type as defined in the SCHEMA.
+    // Make also sure the value comparing against has same data type as defined in the SCHEMA.*/
 
-    let dnf = parser::parse_source(&source);
+    let dnf = parser::parse_source(&query_arg);
 
     let ast: ProgramAst = match dnf {
         Err(e) => {
@@ -72,6 +93,7 @@ fn main() {
 
     println!("{:?}", &ast);
 
+    let env_timer = Instant::now();
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .init();
@@ -92,11 +114,14 @@ fn main() {
         .write_slice(&signature)
         .build()
         .unwrap();
+    let env_time = env_timer.elapsed().as_secs();
+
     let prover = default_prover();
     // measure proving time
     let t = Instant::now();
     let prove_info = prover.prove(env, EVAL_AST_ELF).unwrap();
-    eprint!("Proving time is: {:?}", t.elapsed());
+    let proving_time = t.elapsed().as_secs();
+    eprint!("Proving time is: {:?}", &proving_time);
     println!("\n");
     let receipt = prove_info.receipt;
 
@@ -104,6 +129,21 @@ fn main() {
     let _output: bool = receipt.journal.decode().unwrap();
     println!("The query result is: {}", _output);
 
+    let verifier_timer = Instant::now();
     // verify the result, returned from the guest-side evaluation
     receipt.verify(EVAL_AST_ID).unwrap();
+    let verifiy_time = verifier_timer.elapsed().as_secs();
+
+    // Collect the benchmark results:
+    bench.set_dsl_query(&query_arg);
+    bench.set_env_time(env_time as u32);
+    bench.set_exec_time(32);
+    bench.set_input_bytes(file_size_bytes);
+    bench.set_prove_time(proving_time as u32);
+    bench.set_total_cycles(prove_info.stats.total_cycles as u32);
+    bench.set_user_cycles(prove_info.stats.user_cycles as u32);
+    bench.set_veri_time(verifiy_time as u32);
+    bench.set_segments(prove_info.stats.segments as u32);
+
+    write_results_csv(vec![bench], &out_file_arg).unwrap();
 }

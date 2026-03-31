@@ -1,0 +1,2 @@
+0,"CREATE SCHEMA VehicleData (dataFieldName string, value int); assert ALL VehicleData (dataFieldName == ""profiles.targetSOCPercentage"" AND value < 50);",15111,1048576,647569,1,0,32,377,0
+0,"CREATE SCHEMA VehicleData (dataFieldName string, value int); assert ALL VehicleData (dataFieldName == ""profiles.targetSOCPercentage"" AND value < 50);",15111,1048576,647569,1,0,32,385,0
