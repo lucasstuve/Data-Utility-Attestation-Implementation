@@ -26,6 +26,8 @@ use rsa::{
 use sha2::Sha256;
 
 fn main() {
+    let execution_timer = Instant::now();
+
     //Read environment CLI args.
     let file_name_arg = env::args()
         .nth(1)
@@ -132,17 +134,19 @@ fn main() {
     let verifier_timer = Instant::now();
     // verify the result, returned from the guest-side evaluation
     receipt.verify(EVAL_AST_ID).unwrap();
-    let verifiy_time = verifier_timer.elapsed().as_secs();
+    let verifiy_time = verifier_timer.elapsed().as_millis();
+
+    let execution_time = execution_timer.elapsed().as_secs();
 
     // Collect the benchmark results:
     bench.set_dsl_query(&query_arg);
     bench.set_env_time(env_time as u32);
-    bench.set_exec_time(32);
+    bench.set_exec_time(execution_time as u32);
     bench.set_input_bytes(file_size_bytes);
     bench.set_prove_time(proving_time as u32);
     bench.set_total_cycles(prove_info.stats.total_cycles as u32);
     bench.set_user_cycles(prove_info.stats.user_cycles as u32);
-    bench.set_veri_time(verifiy_time as u32);
+    bench.set_veri_time(verifiy_time as u64);
     bench.set_segments(prove_info.stats.segments as u32);
 
     write_results_csv(vec![bench], &out_file_arg).unwrap();
