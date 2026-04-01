@@ -27,6 +27,7 @@ use sha2::Sha256;
 
 fn main() {
     let execution_timer = Instant::now();
+    // generate_test_data(1, "first_data.json", 0.0, 0.0, 0.0);
 
     //Read environment CLI args.
     let file_name_arg = env::args()

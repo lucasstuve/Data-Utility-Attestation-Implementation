@@ -1,3 +1,0 @@
-bench_id,dsl_case,input_bytes,total_cycles,user_cycles,segments,time_env_s,time_exec_s,time_prov_s,time_veri_ms
-0,"CREATE SCHEMA VehicleData (dataFieldName string, value int); assert ALL VehicleData (dataFieldName == ""profiles.targetSOCPercentage"" AND value < 50);",15111,1048576,647569,1,0,491,491,90
-0,"CREATE SCHEMA VehicleData (dataFieldName string, value int); assert ALL VehicleData (dataFieldName == ""profiles.targetSOCPercentage"" AND value < 50);",15111,1048576,647569,1,0,405,404,77

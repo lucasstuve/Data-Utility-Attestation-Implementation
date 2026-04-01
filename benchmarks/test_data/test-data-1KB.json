@@ -1,0 +1,48 @@
+{
+    "vin": "XXXUUDSE4",
+    "user_id": "d17faa83-dcc7-482c-a7ff-73403140b8f9",
+    "data": [
+        {
+            "key": "49ec652e-264b-4e8b-8ca6-0638fa56d708",
+            "dataFieldName": "profiles.targetSOCPercentage",
+            "value": "35.70",
+            "timestampUtc": "2026-01-01T00:00:00.000Z"
+        },
+        {
+            "key": "3d854fcf-9247-41cb-9e47-662c4ec73dc4",
+            "dataFieldName": "profiles.targetSOCPercentage",
+            "value": "77.86",
+            "timestampUtc": "2026-01-01T00:01:00.000Z"
+        },
+        {
+            "key": "8843fb06-12ad-47e7-8e96-3d7e566784f7",
+            "dataFieldName": "mileage",
+            "value": "80.88",
+            "timestampUtc": "2026-01-01T00:02:00.000Z"
+        },
+        {
+            "key": "e5334c84-a1ed-4dde-930d-a23c145d021a",
+            "dataFieldName": "mileage",
+            "value": "47.01",
+            "timestampUtc": "2026-01-01T00:03:00.000Z"
+        },
+        {
+            "key": "2f8a925a-2576-468c-89ca-361b438c49ad",
+            "dataFieldName": "profiles.targetSOCPercentage",
+            "value": "30.30",
+            "timestampUtc": "2026-01-01T00:04:00.000Z"
+        },
+        {
+            "key": "d106dfd7-dc1f-4fbc-ba8b-136b0d789410",
+            "dataFieldName": "mileage",
+            "value": "84.58",
+            "timestampUtc": "2026-01-01T00:05:00.000Z"
+        },
+        {
+            "key": "fb97d90d-169e-40b7-9656-1eadfabed431",
+            "dataFieldName": "CHARGE_MODE_SELECTION",
+            "value": "HYBRID",
+            "timestampUtc": "2026-01-01T00:06:00.000Z"
+        }
+    ]
+}
