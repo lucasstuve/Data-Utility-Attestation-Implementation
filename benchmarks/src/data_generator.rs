@@ -82,7 +82,7 @@ fn generate_random_event(initial_tmstp: DateTime<Utc>) -> Event {
         value = format!("{:.2}", rng.random_range(1.0..100.0));
     } else if dice == 1 {
         data_field_name = data_field_names[1];
-        let value_str = format!("{:.2}", rng.random_range(1.0..100.0));
+        let value_str = format!("{:.2}", rng.random_range(100.0..1000.0));
         value = value_str
     } else {
         data_field_name = data_field_names[2];
@@ -118,6 +118,90 @@ struct Event {
 
 pub fn next_counter() -> usize {
     COUNTER.fetch_add(60, Ordering::Relaxed)
+}
+
+pub fn generate_data_by_frequency(frequency: f32, file_name: &str, file_size_kb: u64) {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_data");
+
+    let file_path = path.join(file_name);
+
+    fs::create_dir_all(&path).unwrap();
+
+    let uuid = Uuid::new_v4().to_string();
+
+    let mut doc = EventDocument {
+        vin: "XXXUUDSE4".into(),
+        user_id: uuid,
+        data: Vec::new(),
+    };
+
+    let initial_tmstp: DateTime<Utc> = Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
+    println!("path = {:?}", &path);
+
+    let mut file = File::create(&file_path).unwrap();
+
+    let mut rng = rand::rng();
+
+    loop {
+        let is_relevant_event = rng.random_ratio((frequency * 100.0) as u32, 100);
+
+        if is_relevant_event {
+            doc.data.push(generate_schema_event());
+        } else {
+            doc.data.push(generate_not_schema_event());
+        }
+
+        let event = generate_random_event(initial_tmstp);
+        doc.data.push(event);
+
+        let json_string = serde_json::to_string(&doc).unwrap();
+
+        let new_size = json_string.len() as u64;
+
+        if new_size > file_size_kb * 1024 {
+            doc.data.pop();
+            file.write_all(json_string.as_bytes()).unwrap();
+            file.flush().unwrap();
+            break;
+        }
+    }
+}
+
+pub fn generate_schema_event() -> Event {
+    // HARD CODED: QUERY='CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value < 50.0 );'
+    // Event that fits the SCHEMA defintion and is positively reconised by the filter => Event that is actually processed.
+    let id = Uuid::new_v4();
+    let initial_tmstp: DateTime<Utc> = Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
+    let time_stmp_current = initial_tmstp + Duration::seconds(0 + next_counter() as i64);
+
+    let mut rng = rand::rng();
+    let value: f32 = rng.random_range(0.0..49.0);
+    return Event {
+        key: id.to_string(),
+        dataFieldName: "profiles.targetSOCPercentage".into(),
+        value: value.to_string(),
+        timestampUtc: time_stmp_current.to_string(),
+    };
+}
+
+pub fn generate_not_schema_event() -> Event {
+    let mut rng = rand::rng();
+    // HARD CODED: QUERY='CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value < 50.0 );'
+    // Event that fits the SCHEMA defintion and is positively reconised by the filter => Event that is actually processed.
+    let id = Uuid::new_v4();
+    let initial_tmstp: DateTime<Utc> = Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
+    let time_stmp_current = initial_tmstp + Duration::seconds(0 + next_counter() as i64);
+
+    let random_string = rng.random_range(0..3);
+
+    let string_values = ["on", "ok", "off"];
+
+    return Event {
+        key: id.to_string(),
+        dataFieldName: "engine.status.current".into(),
+        value: string_values[random_string].to_string(),
+        timestampUtc: time_stmp_current.to_string(),
+    };
 }
 
 #[cfg(test)]

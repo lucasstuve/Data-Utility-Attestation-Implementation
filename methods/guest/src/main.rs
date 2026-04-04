@@ -66,10 +66,14 @@ fn main() {
     let byte_slice = bytes.as_slice();
 
     for index in index_list {
-        events.push(efficient_event_extraction(
+        let event = efficient_event_extraction(
             schema0.clone(),
             grap_event_string(index, byte_slice).as_bytes(),
-        ));
+        );
+
+        if !event.is_none() {
+            events.push(event.unwrap());
+        }
     }
 
     let pub_key = RsaPublicKey::from_pkcs1_der(&pub_key_pem).unwrap();
