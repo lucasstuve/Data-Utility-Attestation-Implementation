@@ -25,8 +25,8 @@ bash filter-window-benchmark.sh || "7: failed"
 echo "Start 8th benchmark: frequency-benchmark.sh" 
 bash frequency-benchmark.sh || "8: failed"
 
-echo "Start 9th benchmark: extensive-benchmark-100MB.sh"
-bash extensive-benchmark-100MB.sh || "9: failed"
+#echo "Start 9th benchmark: extensive-benchmark-100MB.sh"
+#bash extensive-benchmark-100MB.sh || "9: failed"
 
-echo "Start 10th benchmark: extenstive-benchmark-1GB.sh"
-bash extensive-benchmark-1000MB.sh || "10: failed"
+#echo "Start 10th benchmark: extenstive-benchmark-1GB.sh"
+#bash extensive-benchmark-1000MB.sh || "10: failed"
