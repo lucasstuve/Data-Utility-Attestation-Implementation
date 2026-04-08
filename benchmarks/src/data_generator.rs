@@ -54,7 +54,8 @@ pub fn generate_test_data(
 
         if new_size > file_size_kb * 1024 {
             doc.data.pop();
-            file.write_all(json_string.as_bytes()).unwrap();
+            let final_json = serde_json::to_string(&doc).unwrap();
+            file.write_all(final_json.as_bytes()).unwrap();
             file.flush().unwrap();
             break;
         }
@@ -122,7 +123,6 @@ pub fn next_counter() -> usize {
 
 pub fn generate_data_by_frequency(frequency: f32, file_name: &str, file_size_kb: u64) {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_data");
-
     let file_path = path.join(file_name);
 
     fs::create_dir_all(&path).unwrap();
@@ -139,29 +139,35 @@ pub fn generate_data_by_frequency(frequency: f32, file_name: &str, file_size_kb:
     println!("path = {:?}", &path);
 
     let mut file = File::create(&file_path).unwrap();
-
     let mut rng = rand::rng();
+    let mut counter_fitting: f64 = 0.0;
+    let mut counter_not_fitting: f64 = 0.0;
 
     loop {
-        let is_relevant_event = rng.random_ratio((frequency * 100.0) as u32, 100);
-
-        if is_relevant_event {
-            doc.data.push(generate_schema_event());
+        let event: Event = if rng.random_bool(frequency as f64) {
+            counter_fitting = counter_fitting + 1.0;
+            generate_schema_event()
         } else {
-            doc.data.push(generate_not_schema_event());
-        }
+            counter_not_fitting = counter_not_fitting + 1.0;
+            generate_not_schema_event()
+        };
 
-        let event = generate_random_event(initial_tmstp);
         doc.data.push(event);
 
-        let json_string = serde_json::to_string(&doc).unwrap();
+        println!("Number of Elements created ... : {}", doc.data.len());
 
+        let json_string = serde_json::to_string(&doc).unwrap();
         let new_size = json_string.len() as u64;
 
         if new_size > file_size_kb * 1024 {
             doc.data.pop();
-            file.write_all(json_string.as_bytes()).unwrap();
+            let final_json = serde_json::to_string(&doc).unwrap();
+            file.write_all(final_json.as_bytes()).unwrap();
             file.flush().unwrap();
+            println!(
+                "Data frequency is: {}",
+                (counter_fitting / (counter_fitting + counter_not_fitting))
+            );
             break;
         }
     }
@@ -202,6 +208,62 @@ pub fn generate_not_schema_event() -> Event {
         value: string_values[random_string].to_string(),
         timestampUtc: time_stmp_current.to_string(),
     };
+}
+
+pub fn generate_test_data_large(
+    file_size_kb: u64,
+    file_name: &str,
+    _frequency_filter: f32,
+    _frequency_patterns: f32,
+    _frequency_session: f32,
+) {
+    //  let base = "evaluator_program/benchmarks/test_data";
+
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_data");
+
+    let file_path = path.join(file_name);
+
+    fs::create_dir_all(&path).unwrap();
+
+    println!("manifest dir = {}", env!("CARGO_MANIFEST_DIR"));
+    println!("base         = {}", path.display());
+    println!("file_path    = {}", file_path.display());
+
+    // let path = Path::new(&base).join(file_name);
+
+    let uuid = Uuid::new_v4().to_string();
+
+    let mut doc = EventDocument {
+        vin: "XXXUUDSE4".into(),
+        user_id: uuid,
+        data: Vec::new(),
+    };
+
+    let initial_tmstp: DateTime<Utc> = Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
+    println!("path = {:?}", &path);
+
+    let mut file = File::create(&file_path).unwrap();
+
+    let mut event_counter: u64 = 0;
+
+    loop {
+        let event = generate_random_event(initial_tmstp);
+        doc.data.push(event);
+        event_counter = event_counter + 1;
+        let json_string = serde_json::to_string(&doc).unwrap();
+
+        let new_size = json_string.len() as u64;
+
+        if event_counter % 10000 == 0 {
+            if new_size > file_size_kb * 1024 {
+                doc.data.pop();
+                let final_json = serde_json::to_string(&doc).unwrap();
+                file.write_all(final_json.as_bytes()).unwrap();
+                file.flush().unwrap();
+                break;
+            }
+        }
+    }
 }
 
 #[cfg(test)]

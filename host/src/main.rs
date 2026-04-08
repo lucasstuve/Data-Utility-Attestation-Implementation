@@ -2,7 +2,10 @@
 // The ELF is used for proving and the ID is used for verification.
 
 use dnf_core::epl::ProgramAst;
+use dnf_core::input_extractor::{efficient_event_extraction, grap_event_string};
+use dnf_core::interpreter::Event;
 use methods::{EVAL_AST_ELF, EVAL_AST_ID};
+
 mod parser;
 mod predata_processor;
 
@@ -12,6 +15,9 @@ use rand::rngs::OsRng;
 use risc0_zkvm::{default_prover, ExecutorEnv};
 use std::env;
 use std::fs::{self, File};
+use std::io::Read;
+
+use colored::Colorize;
 
 use std::path::Path;
 use std::time::Instant;
@@ -27,7 +33,6 @@ use sha2::Sha256;
 
 fn main() {
     let execution_timer = Instant::now();
-    // generate_test_data(1, "first_data.json", 0.0, 0.0, 0.0);
 
     //Read environment CLI args.
     let file_name_arg = env::args()
@@ -74,6 +79,14 @@ fn main() {
 
     let index_list = create_events_indexes(file_str.as_str());
 
+    let len = &index_list.len().to_string().purple();
+
+    println!(
+        "{} {}",
+        "Expected total number of events in the file:".magenta(),
+        len
+    );
+
     let signature = singing_key.sign_with_rng(&mut rng, file_bytes).to_vec();
     let sig_length: u32 = signature.len().try_into().unwrap();
 
@@ -95,6 +108,26 @@ fn main() {
     };
 
     println!("{:?}", &ast);
+
+    let mut host_events = Vec::new();
+    let copied_ast = ast.schemas[0].clone();
+
+    for i in &index_list {
+        let grabed_events = grap_event_string(*i, file_bytes);
+        host_events.push(grabed_events);
+    }
+
+    let mut extracted_events = Vec::new();
+    for e in host_events {
+        let event = efficient_event_extraction(copied_ast.clone(), e.as_bytes());
+        extracted_events.push(event.clone());
+    }
+    println!("");
+    println!(
+        "{} {:?} ",
+        "Expected events are :".green(),
+        extracted_events
+    );
 
     let env_timer = Instant::now();
     tracing_subscriber::fmt()
@@ -129,8 +162,17 @@ fn main() {
     let receipt = prove_info.receipt;
 
     // Receive the boolean result and print it.
-    let _output: bool = receipt.journal.decode().unwrap();
+    let _output: bool = false; // receipt.journal.decode().unwrap();
     println!("The query result is: {}", _output);
+
+    // Debug Output
+
+    let _debug_output: u32 = receipt.journal.decode().unwrap();
+    println!(
+        "{}{}",
+        "Number of events processed in the GUEST:".green(),
+        _debug_output
+    );
 
     let verifier_timer = Instant::now();
     // verify the result, returned from the guest-side evaluation
@@ -140,6 +182,7 @@ fn main() {
     let execution_time = execution_timer.elapsed().as_secs();
 
     // Collect the benchmark results:
+    bench.set_number_events(_debug_output);
     bench.set_dsl_query(&query_arg);
     bench.set_env_time(env_time as u32);
     bench.set_exec_time(execution_time as u32);

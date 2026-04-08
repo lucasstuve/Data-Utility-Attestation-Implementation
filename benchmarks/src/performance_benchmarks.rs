@@ -9,7 +9,7 @@ static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(serde::Serialize)]
 pub struct Row<'a> {
-    pub bench_id: u32,
+    pub n_events: u32,
     pub dsl_case: &'a str,
     pub input_bytes: u64,
     pub total_cycles: u32,
@@ -28,7 +28,7 @@ pub fn next_counter() -> usize {
 impl<'a> Row<'a> {
     pub fn new() -> Self {
         Row {
-            bench_id: (next_counter() as u32),
+            n_events: (0 as u32),
             dsl_case: "",
             input_bytes: (0 as u64),
             total_cycles: (0 as u32),
@@ -68,6 +68,9 @@ impl<'a> Row<'a> {
 
     pub fn set_segments(&mut self, n_segments: u32) {
         self.segments = n_segments;
+    }
+    pub fn set_number_events(&mut self, n_events: u32) {
+        self.n_events = n_events;
     }
 }
 

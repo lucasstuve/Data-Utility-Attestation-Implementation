@@ -1,8 +1,9 @@
 pub fn create_events_indexes(file: &str) -> Vec<(u32, u32)> {
-    let data_list_indicator = "\"Data\":[";
-    let meta_base = file
-        .find(data_list_indicator)
-        .map(|p| p + data_list_indicator.len())
+    let data_list_indicator = [r#""Data":["#, r#""data":["#]; // \"ata\":[";
+
+    let meta_base = data_list_indicator
+        .iter()
+        .find_map(|indicator| file.find(indicator).map(|p| p + indicator.len()))
         .unwrap_or(0);
 
     let data_bytes = &file[meta_base..];

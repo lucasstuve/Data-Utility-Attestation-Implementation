@@ -4,11 +4,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-DATA_SETS=("test-data-1KB.json" "test-data-10KB.json" "test-data-100KB.json" "test-data-1000KB.json")
-QUERY='CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value < 50.0 ); assert VehicleData #win:time(50 min);  assert (COUNT(value) > 20);'
-RESULTS_FILE="filter-window-aggregate-benchmark.csv"
+DATA_SETS=("WVEZZZOOOO6_20251218192058.json")
+QUERY='CREATE SCHEMA VehicleData (dataFieldName string, value int); assert ALL VehicleData (dataFieldName == "currentSOCInPct" AND value < 50 ); assert (COUNT(value) > 200); '
+RESULTS_FILE="filter-aggregate-vw-real-data.csv"
 
 cd "$PROJECT_ROOT"
+
 export RISC0_DEV_MODE=0
 
 for DATA_SET in "${DATA_SETS[@]}"; do 

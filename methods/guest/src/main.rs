@@ -71,10 +71,12 @@ fn main() {
             grap_event_string(index, byte_slice).as_bytes(),
         );
 
-        if !event.is_none() {
+        if event.is_some() {
             events.push(event.unwrap());
         }
     }
+
+    let number_of_events: u32 = events.len().try_into().unwrap();
 
     let pub_key = RsaPublicKey::from_pkcs1_der(&pub_key_pem).unwrap();
     let verifying_key = VerifyingKey::<Sha256>::new(pub_key);
@@ -86,5 +88,7 @@ fn main() {
     let result = eval_program(&epl, &events) && sig_veri_result;
 
     // Commit the programs result to the journal
-    env::commit(&result);
+
+    //  env::commit(&result);
+    env::commit(&number_of_events);
 }

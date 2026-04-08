@@ -7,10 +7,11 @@ extern crate alloc;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use chrono::{DateTime, FixedOffset};
 use libm::sqrt;
+use serde::{Deserialize, Serialize};
 
 pub type Env = BTreeMap<String, Term>;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Event {
     pub data: Vec<Term>,
 }

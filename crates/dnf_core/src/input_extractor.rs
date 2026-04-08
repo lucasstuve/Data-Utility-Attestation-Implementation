@@ -78,6 +78,11 @@ pub fn efficient_event_extraction(schema: Schema, raw_event: &[u8]) -> Option<Ev
 
         let s = core::str::from_utf8(&&raw_event[start..abs_end]).unwrap();
 
+        /*
+        if s.len() == 0 || s == "" {
+            return None;
+        } */
+
         match a.i_type {
             Itype::Float => {
                 if s.chars().all(|c| c.is_ascii_digit() || c == '.') {
