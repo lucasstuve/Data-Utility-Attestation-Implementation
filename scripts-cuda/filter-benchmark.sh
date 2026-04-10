@@ -15,5 +15,7 @@ for DATA_SET in "${DATA_SETS[@]}"; do
 echo -e "\e[1mSTART benchmark for:\e[0m"
 echo -e "\e[31m $DATA_SET\e[0m"
 #echo "Start benchmark for: $DATA_SET"
-RUSTFLAGS="-C target-cpu=native" cargo run -p host --release --features cuda -- "$DATA_SET" "$QUERY" "$RESULTS_FILE"
+#RUSTFLAGS="-C target-cpu=native" 
+cargo build -p host --release --features cuda # test building on no GPU RTX machine
+#RUSTFLAGS="-C target-cpu=native" cargo build -p host --release --features cuda -- "$DATA_SET" "$QUERY" "$RESULTS_FILE"
 done
