@@ -11,6 +11,7 @@ RESULTS_FILE="filter-aggregate-benchmark.csv"
 cd "$PROJECT_ROOT"
 export RISC0_DEV_MODE=0
 
+
 for DATA_SET in "${DATA_SETS[@]}"; do 
 echo -e "\e[1mSTART benchmark for:\e[0m"
 echo -e "\e[31m $DATA_SET\e[0m"

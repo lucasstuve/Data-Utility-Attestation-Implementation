@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+
 cd "$PROJECT_ROOT"
 
 # SET-UP Copied from the official RISC0 documentation, with small fixes
@@ -32,6 +33,7 @@ echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> ~/.bashr
 echo 'export CC=gcc-12' >> ~/.bashrc
 echo 'export CXX=g++-12' >> ~/.bashrc
 echo 'export NVCC_CCBIN=g++-12' >> ~/.bashrc
+export RISC0_CUDA_ARCH=sm_86
 
 # load rust for this script run
 source "$HOME/.cargo/env"

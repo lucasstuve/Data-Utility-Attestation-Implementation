@@ -5,6 +5,10 @@ members = ["host", "methods", "crates/dnf_core", "methods/guest", "benchmarks"]
 [patch.crates-io]
 sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
 rsa = { git = "https://github.com/risc0/RustCrypto-RSA", tag = "v0.9.6-risczero.0" }
+risc0-circuit-keccak-sys = { path = "vendor/risc0-circuit-keccak-sys" }
+risc0-circuit-rv32im-sys = { path = "vendor/risc0-circuit-rv32im-sys" }
+sppark = { path = "vendor/sppark" }
+
 
 [profile.dev]
 opt-level = 3
