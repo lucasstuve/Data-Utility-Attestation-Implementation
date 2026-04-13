@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "Start 1st benchmark: filter-benchmark.sh"
-bash filter-benchmark.sh || "1: failed"
+bash filter-benchmark.sh || echo "1: failed"
 
 #echo "Start 2nd bechmark: filter-aggregate-benchmark.sh" 
 #bash filter-aggregate-benchmark.sh || "2: failed"

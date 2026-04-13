@@ -1,0 +1,238 @@
+@startuml
+left to right direction
+skinparam lineType ortho
+package l__lib #lightskyblue {
+  package ast #lightskyblue {
+    class ast::Conjunction as "Conjunction" <<struct>> {
+      .. Derives ..
+      Debug
+      Clone
+      PartialEq
+      Serialize
+      Deserialize
+      .. Members ..
+      preds: Vec < Pred >
+    }
+    class ast::Disjunction as "Disjunction" <<struct>> {
+      .. Derives ..
+      Debug
+      Clone
+      PartialEq
+      Serialize
+      Deserialize
+      .. Members ..
+      conj: Vec < Conjunction >
+    }
+    class ast::Operator as "Operator" <<struct>> {
+      .. Implements ..
+      fmt::Display
+      .. Functions ..
+      + fmt(f: &fmt :: Formatter < '_ >) -> fmt :: Result
+    }
+    class ast::Pred as "Pred" <<struct>> {
+      .. Derives ..
+      Debug
+      Clone
+      PartialEq
+      Serialize
+      Deserialize
+      .. Members ..
+      lhs: Term
+      op: Operator
+      rhs: Term
+    }
+    class ast::Term as "Term" <<struct>> {
+      .. Functions ..
+      + equal_term_boolean(a: &Term, b: &Term) -> bool
+      + equal_term_str(a: &Term, b: &Term) -> bool
+      + equal_term_int(a: &Term, b: &Term) -> bool
+      + equal_term_ident(a: &Term, b: &Term) -> bool
+      + equal_term_float(a: &Term, b: &Term) -> bool
+    }
+  }
+  package epl #lightskyblue {
+    class epl::Aggregate as "Aggregate" <<struct>> {
+      .. Derives ..
+      Debug
+      Clone
+      PartialEq
+      PartialOrd
+      Serialize
+      Deserialize
+      .. Members ..
+      ident: String
+      operation: AggOperation
+    }
+    class epl::AssertRule as "AssertRule" <<struct>> {
+      .. Derives ..
+      Debug
+      Clone
+      PartialEq
+      Serialize
+      Deserialize
+      .. Members ..
+      ident: String
+      rule: Vec < Disjunction >
+      quantifier: Quantifier
+    }
+    class epl::Attribute as "Attribute" <<struct>> {
+      .. Derives ..
+      Debug
+      Clone
+      PartialEq
+      Eq
+      Serialize
+      Deserialize
+      .. Members ..
+      ident: String
+      i_type: Itype
+    }
+    class epl::AttributeList as "AttributeList" <<struct>> {
+      .. Derives ..
+      Debug
+      Clone
+      PartialEq
+      Eq
+      Serialize
+      Deserialize
+      .. Members ..
+      list: Vec < Attribute >
+    }
+    class epl::CountWindow as "CountWindow" <<struct>> {
+      .. Derives ..
+      Debug
+      Copy
+      Clone
+      PartialEq
+      PartialOrd
+      Eq
+      Serialize
+      Deserialize
+      .. Members ..
+      w_width: u64
+    }
+    class epl::PatternRule as "PatternRule" <<struct>> {
+      .. Derives ..
+      Debug
+      Clone
+      PartialEq
+      Serialize
+      Deserialize
+      .. Members ..
+      pattern_sequence: Vec < Disjunction >
+      identifier: String
+      .. Functions ..
+      + new() -> PatternRule
+    }
+    class epl::ProgramAst as "ProgramAst" <<struct>> {
+      .. Derives ..
+      Debug
+      Clone
+      PartialEq
+      Serialize
+      Deserialize
+      .. Members ..
+      schemas: Vec < Schema >
+      assert_rules: Vec < AssertRule >
+      pattern_rule: Option < PatternRule >
+      aggregates: Vec < AssertRule >
+      window_rule: Option < Window >
+      session: Option < Session >
+    }
+    class epl::Schema as "Schema" <<struct>> {
+      .. Derives ..
+      Debug
+      Clone
+      PartialEq
+      Eq
+      Serialize
+      Deserialize
+      .. Members ..
+      ident: String
+      attribute_list: AttributeList
+    }
+    class epl::Session as "Session" <<struct>> {
+      .. Derives ..
+      Debug
+      Clone
+      PartialEq
+      Serialize
+      Deserialize
+      .. Members ..
+      identifier: String
+      session_sequence: Vec < Disjunction >
+    }
+    class epl::TimeWindow as "TimeWindow" <<struct>> {
+      .. Derives ..
+      Debug
+      Clone
+      PartialEq
+      PartialOrd
+      Serialize
+      Deserialize
+      .. Members ..
+      w_width: Term
+      time_unit: TimeUnit
+    }
+  }
+  package input_extractor #lightskyblue {
+    class input_extractor_mod <<mod>> #lightskyblue {
+      .. Module functions ..
+      + grap_event_string(indexes: (u32, u32), bytes: &[u8]) -> &str
+      + efficient_event_extraction(schema: Schema, raw_event: &[u8]) -> Option < Event >
+      + valid_schema_types(s: &Schema) -> Vec < & 'a str >
+      + bytes_to_term(itype: Itype, b: &[u8]) -> Term
+      + event_extraction_test() -> ()
+    }
+  }
+  package interpreter #lightskyblue {
+    class interpreter::Event as "Event" <<struct>> {
+      .. Derives ..
+      Debug
+      PartialEq
+      Clone
+      Serialize
+      Deserialize
+      .. Members ..
+      data: Vec < Term >
+    }
+    class interpreter_mod <<mod>> #lightskyblue {
+      .. Module functions ..
+      + eval_program(p: &ProgramAst, input: &Vec < Event >) -> bool
+      + eval_session(events: &Vec < Event >, mapping: &BTreeMap < String , usize >, session_def: &Option < Session >) -> bool
+      + eval_pattern_rule(events: &Vec < Event >, mapping: &BTreeMap < String , usize >, p_rule: &Option < PatternRule >) -> bool
+      + flatten_window(windows: &Vec < Vec < Event > >) -> Vec < Vec < Term > >
+      + eval_window_rule(w: &Window, events: Vec < Event >, utc_pos: &usize) -> Vec < Vec < Event > >
+      + get_time_window_ms(time_unit: &TimeUnit, w_width: Term) -> i64
+      + eval_agg_data(op: &AggOperation, data: &Vec < Term >) -> Option < Term >
+      + avg(data: &[Term]) -> Option < Term >
+      + count(data: &[Term]) -> Option < Term >
+      + stddev(data: &[Term]) -> Option < Term >
+      + max(data: &[Term]) -> Option < Term >
+      + min(data: &[Term]) -> Option < Term >
+      + sum(data: &[Term]) -> Option < Term >
+      + median(data: &[Term]) -> Option < Term >
+      + as_f64(t: &Term) -> Option < f64 >
+      + as_i64(t: &Term) -> Option < i64 >
+      + type_input(e: Event, s: &Schema) -> BTreeMap < String , Term >
+      + mapping_from_schema(s: &Schema) -> BTreeMap < String , usize >
+      + eval_filter_dnf(dis: &Vec < Disjunction >, mapping: &BTreeMap < String , usize >, event: &Event) -> bool
+      + eval_pred(p: &Pred, env: &BTreeMap < String , usize >, event: &Event) -> bool
+      + operator_to_function(op: Operator) -> fn (a : & T , b : & T) -> bool
+    }
+  }
+}
+ast::Conjunction --> ast::Pred
+ast::Disjunction --> ast::Conjunction
+ast::Pred --> ast::Term
+ast::Pred --> ast::Operator
+ast::Pred --> ast::Term
+epl::AttributeList --> epl::Attribute
+epl::ProgramAst --> epl::Schema
+epl::ProgramAst --> epl::AssertRule
+epl::ProgramAst --> epl::PatternRule
+epl::ProgramAst --> epl::AssertRule
+epl::ProgramAst --> epl::Session
+epl::Schema --> epl::Attribute
+epl::Schema --> epl::AttributeList
+@enduml
