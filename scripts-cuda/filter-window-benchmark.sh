@@ -6,7 +6,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 DATA_SETS=("test-data-1KB.json" "test-data-10KB.json" "test-data-100KB.json" "test-data-1000KB.json")
 QUERY='CREATE SCHEMA VehicleData (dataFieldName string, value float, timestampUtc string ); assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value < 50.0 ); assert VehicleData #win:time(50 min); '
-RESULTS_FILE="filter-window-benchmark.csv"
+RESULTS_FILE="filter-window-benchmark-cuda.csv"
 
 cd "$PROJECT_ROOT"
 export RISC0_DEV_MODE=0

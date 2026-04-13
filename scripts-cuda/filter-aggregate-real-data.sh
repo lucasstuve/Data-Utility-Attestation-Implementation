@@ -6,7 +6,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 DATA_SETS=("WVEZZZOOOO6_20251218192058.json")
 QUERY='CREATE SCHEMA VehicleData (dataFieldName string, value int); assert ALL VehicleData (dataFieldName == "currentSOCInPct" AND value < 50 ); assert (COUNT(value) > 200); '
-RESULTS_FILE="filter-aggregate-vw-real-data.csv"
+RESULTS_FILE="filter-aggregate-vw-real-data-cuda.csv"
 
 cd "$PROJECT_ROOT"
 
