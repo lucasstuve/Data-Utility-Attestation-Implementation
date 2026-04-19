@@ -99,6 +99,8 @@ fn main() {
 
     let dnf = parser::parse_source(&query_arg);
 
+    println!("PEST: {:?}", dnf);
+
     let ast: ProgramAst = match dnf {
         Err(e) => {
             print!("Error {}", e);
