@@ -25,6 +25,7 @@ use alloc::vec::Vec;
 use alloc::{string::String, vec};
 use dnf_core::{
     epl::ProgramAst,
+    index_list_validator::check_list,
     input_extractor::{efficient_event_extraction, grap_event_string},
     interpreter::{eval_program, Event},
 };
@@ -65,7 +66,7 @@ fn main() {
 
     let byte_slice = bytes.as_slice();
 
-    for index in index_list {
+    for index in index_list.clone() {
         let event = efficient_event_extraction(
             schema0.clone(),
             grap_event_string(index, byte_slice).as_bytes(),
@@ -85,7 +86,7 @@ fn main() {
     let sig_veri_result = verifying_key.verify(&byte_slice, &sig).is_ok();
 
     // start the evaluator to obtain the boolean result over all event data
-    let result = eval_program(&epl, &events) && sig_veri_result;
+    let result = eval_program(&epl, &events) && sig_veri_result && check_list(index_list);
 
     // Commit the programs result to the journal
 
