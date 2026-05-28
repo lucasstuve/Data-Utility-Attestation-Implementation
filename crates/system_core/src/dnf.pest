@@ -1,0 +1,13 @@
+dnf_statement = { Disjunction }
+
+Disjunction = { Conjunction ~ (OR ~ Conjunction)* }
+Conjunction = { Pred ~ (AND ~ Pred)* }
+Pred        = {   Term ~ Operator ~ Term  }
+
+Term        = _{Float | Int | Bool | Str | aggregate | Ident } 
+Operator    = { "<=" | ">=" | "==" | "!=" | "<" | ">" }
+
+OR          = _{ "OR" }
+AND         = _{ "AND" }
+
+

@@ -1,5 +1,6 @@
 extern crate alloc;
 
+use alloc::format;
 use alloc::vec;
 
 use crate::ast::Conjunction;
@@ -20,6 +21,13 @@ pub struct ProgramAst {
     pub aggregates: Vec<AssertRule>,
     pub window_rule: Option<Window>,
     pub session: Option<Session>,
+}
+
+impl ProgramAst {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = alloc::format!("{:?}", self).into_bytes();
+        return bytes;
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -25,10 +25,6 @@ pub fn generate_test_data(
 
     fs::create_dir_all(&path).unwrap();
 
-    println!("manifest dir = {}", env!("CARGO_MANIFEST_DIR"));
-    println!("base         = {}", path.display());
-    println!("file_path    = {}", file_path.display());
-
     // let path = Path::new(&base).join(file_name);
 
     let uuid = Uuid::new_v4().to_string();
@@ -40,7 +36,6 @@ pub fn generate_test_data(
     };
 
     let initial_tmstp: DateTime<Utc> = Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
-    println!("path = {:?}", &path);
 
     let mut file = File::create(&file_path).unwrap();
 
@@ -121,11 +116,16 @@ pub fn next_counter() -> usize {
     COUNTER.fetch_add(60, Ordering::Relaxed)
 }
 
-pub fn generate_data_by_frequency(frequency: f32, file_name: &str, file_size_kb: u64) {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_data");
+pub fn generate_data_by_frequency(
+    frequency: f32,
+    file_name: &str,
+    file_size_kb: u64,
+    output_dir: impl AsRef<Path>,
+) {
+    let path = output_dir.as_ref();
     let file_path = path.join(file_name);
 
-    fs::create_dir_all(&path).unwrap();
+    fs::create_dir_all(path).unwrap();
 
     let uuid = Uuid::new_v4().to_string();
 
@@ -136,7 +136,6 @@ pub fn generate_data_by_frequency(frequency: f32, file_name: &str, file_size_kb:
     };
 
     let initial_tmstp: DateTime<Utc> = Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
-    println!("path = {:?}", &path);
 
     let mut file = File::create(&file_path).unwrap();
     let mut rng = rand::rng();
@@ -154,8 +153,6 @@ pub fn generate_data_by_frequency(frequency: f32, file_name: &str, file_size_kb:
 
         doc.data.push(event);
 
-        println!("Number of Elements created ... : {}", doc.data.len());
-
         let json_string = serde_json::to_string(&doc).unwrap();
         let new_size = json_string.len() as u64;
 
@@ -164,10 +161,7 @@ pub fn generate_data_by_frequency(frequency: f32, file_name: &str, file_size_kb:
             let final_json = serde_json::to_string(&doc).unwrap();
             file.write_all(final_json.as_bytes()).unwrap();
             file.flush().unwrap();
-            println!(
-                "Data frequency is: {}",
-                (counter_fitting / (counter_fitting + counter_not_fitting))
-            );
+
             break;
         }
     }
@@ -225,10 +219,6 @@ pub fn generate_test_data_large(
 
     fs::create_dir_all(&path).unwrap();
 
-    println!("manifest dir = {}", env!("CARGO_MANIFEST_DIR"));
-    println!("base         = {}", path.display());
-    println!("file_path    = {}", file_path.display());
-
     // let path = Path::new(&base).join(file_name);
 
     let uuid = Uuid::new_v4().to_string();
@@ -240,7 +230,6 @@ pub fn generate_test_data_large(
     };
 
     let initial_tmstp: DateTime<Utc> = Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
-    println!("path = {:?}", &path);
 
     let mut file = File::create(&file_path).unwrap();
 

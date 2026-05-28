@@ -11,7 +11,7 @@ use dnf_core::epl::{
 };
 use pest::Parser;
 use pest_derive::Parser;
-use rustyline::completion::Pair;
+
 //use risc0_zkvm_platform::syscall::bigint::WIDTH_WORDS;
 
 #[derive(Parser)]
@@ -28,7 +28,7 @@ pub fn parse_source(source: &str) -> Result<ProgramAst, pest::error::Error<Rule>
     // Ok(ast)
 
     let program_pair = pairs.next().unwrap();
-    //println!("{:?}", program_pair);
+    println!("{:?}", program_pair);
     Ok(build_program(program_pair))
 }
 
