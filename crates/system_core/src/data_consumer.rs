@@ -1,10 +1,16 @@
 use crate::parser;
 use dnf_core::epl::ProgramAst;
+use linfa::prelude::*;
+use linfa::DatasetBase;
+use linfa_trees::DecisionTree;
+use ndarray::array;
+use ndarray::{Array1, Array2};
 use risc0_zkvm::Receipt;
 use risc0_zkvm::{default_prover, ExecutorEnv};
+use serde::{Deserialize, Serialize};
 use sha2::{digest, Digest, Sha256};
 
-use serde::{Deserialize, Serialize};
+pub type ALDataset = DatasetBase<Array2<f64>, Array1<usize>>;
 
 #[derive(Serialize, Deserialize)]
 pub struct Journal {
@@ -14,16 +20,53 @@ pub struct Journal {
     pub number_of_events: u32,
 }
 
-pub fn train_base_model() {
+pub fn train_base_model() -> ALDataset {
     println!("Mock: Training the AL model..................");
+    //
+    let soc_percentage_values = array![
+        [0.05],
+        [0.12],
+        [0.18],
+        [0.24],
+        [0.31],
+        [0.46],
+        [0.46],
+        [0.46],
+        [0.46],
+        [0.46]
+    ];
+
+    // Labels: noting whether the AL model considered the label or not.
+
+    let labels =
+        array![0usize, 0usize, 0usize, 0usize, 1usize, 1usize, 1usize, 1usize, 1usize, 1usize,];
+
+    let data_set = Dataset::new(soc_percentage_values, labels);
+
+    return data_set;
 }
 
 pub fn train_decision_tree_classifier() {
     println!(" Mocking to obtain a DNF Rule...............");
 }
+pub fn train_linfa_decision_tree(dataset: ALDataset) -> DecisionTree<f64, usize> {
+    let tree = DecisionTree::params().fit(&dataset).unwrap();
+    let accuracy = tree
+        .predict(&dataset)
+        .confusion_matrix(&dataset)
+        .unwrap()
+        .accuracy();
+    assert!(accuracy > 0.6);
+
+    println!(" Mocking to obtain a DNF Rule...............");
+
+    return tree;
+}
+
+pub fn obtain_query_from_decision_tree(tree: DecisionTree<f64, usize>) {}
 
 pub fn generate_query_from_dnf() -> String {
-    let query = r#"CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value < 50.0 ); assert (COUNT(value) > 20);"#;
+    let query = r#"CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value > 20.0 ); assert (COUNT(value) > 1);"#;
     return query.to_string();
 }
 

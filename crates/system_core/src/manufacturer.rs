@@ -21,7 +21,7 @@ use std::path::Path;
 use std::time::Instant;
 pub fn collect_batch(file: &str, size: u64) -> &str {
     let output_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test_data");
-    generate_data_by_frequency(0.05, file, size, output_dir);
+    generate_data_by_frequency(0.5, file, size, output_dir); //
     return file;
 }
 pub const USER_BATCH_JSON: &str = include_str!("../test_data/user-batch.json");
