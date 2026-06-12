@@ -2,9 +2,9 @@ use dnf_core::epl::ProgramAst;
 use dnf_core::input_extractor::{efficient_event_extraction, grap_event_string};
 use methods::{EVAL_AST_ELF, EVAL_AST_ID};
 use system_core::data_consumer::{
-    self, check_commitment, check_signature_alignment, generate_query_from_dnf,
-    recalculate_predicate_hash, train_base_model, train_decision_tree_classifier,
-    verify_attestation,
+    self, base_model_dataset, check_commitment, check_signature_alignment, generate_query_from_dnf,
+    generate_query_from_textual_predicate, obtain_predicate_from_decision_tree,
+    recalculate_predicate_hash, train_linfa_decision_tree, verify_attestation,
 };
 use system_core::manufacturer::{self, collect_batch, sign_batch, USER_BATCH_JSON};
 
@@ -16,6 +16,7 @@ use predata_processor::create_events_indexes;
 use risc0_zkvm::{default_prover, ExecutorEnv};
 
 use colored::{ColoredString, Colorize};
+use std::env;
 use std::time::Instant;
 use std::{str, thread, time::Duration};
 
@@ -38,11 +39,14 @@ fn step(number: u32, actor: ColoredString, message: &str) {
 }
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    // first argument selects the dataset e.g. cargo run -- "user-batch.json"
+
     println!("\n{}\n", "START DATA UTILITY ATTESTATION PROTOCOL".bold());
 
     phase("PHASE I: Batch provisioning by the MANUFACTURER");
 
-    manufacturer::collect_batch("user-batch.json", 1);
+    manufacturer::collect_batch(&args[1], 1);
 
     step(
         1,
@@ -71,11 +75,9 @@ fn main() {
 
     phase("PHASE II: Utility rule generation by the DATA CONSUMER");
 
-    data_consumer::train_base_model();
+    let data_from_base_model = data_consumer::base_model_dataset();
 
     step(4, "Data Consumer".green(), "trains AL base model.");
-
-    data_consumer::train_decision_tree_classifier();
 
     step(
         5,
@@ -83,7 +85,12 @@ fn main() {
         "obtains utility rules as DNF from decision tree classifier.",
     );
 
-    let query = data_consumer::generate_query_from_dnf();
+    let decision_tree = data_consumer::train_linfa_decision_tree(data_from_base_model);
+    let textual_predicate = data_consumer::obtain_predicate_from_decision_tree(
+        decision_tree,
+        "profiles.targetSOCPercentage",
+        1usize,
+    );
 
     step(
         6,
@@ -91,6 +98,7 @@ fn main() {
         "generates query from predicate rules.",
     );
 
+    let query = data_consumer::generate_query_from_textual_predicate(&textual_predicate);
     println!("Generated query:");
     println!("{}", query);
 

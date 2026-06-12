@@ -1,3 +1,6 @@
+use std::fmt::format;
+use std::panic::panic_any;
+
 use crate::parser;
 use dnf_core::epl::ProgramAst;
 use linfa::prelude::*;
@@ -20,35 +23,37 @@ pub struct Journal {
     pub number_of_events: u32,
 }
 
-pub fn train_base_model() -> ALDataset {
+pub fn base_model_dataset() -> ALDataset {
     println!("Mock: Training the AL model..................");
     //
     let soc_percentage_values = array![
-        [0.05],
-        [0.12],
-        [0.18],
-        [0.24],
-        [0.31],
-        [0.46],
-        [0.46],
-        [0.46],
-        [0.46],
-        [0.46]
+        [5.0],
+        [12.0],
+        [18.0],
+        [24.0],
+        [31.0],
+        [46.0],
+        [46.0],
+        [66.0],
+        [73.0],
+        [80.0]
     ];
 
     // Labels: noting whether the AL model considered the label or not.
 
     let labels =
-        array![0usize, 0usize, 0usize, 0usize, 1usize, 1usize, 1usize, 1usize, 1usize, 1usize,];
+        array![0usize, 0usize, 0usize, 0usize, 0usize, 0usize, 0usize, 1usize, 1usize, 1usize,];
 
     let data_set = Dataset::new(soc_percentage_values, labels);
 
     return data_set;
 }
 
+/*
+
 pub fn train_decision_tree_classifier() {
     println!(" Mocking to obtain a DNF Rule...............");
-}
+}*/
 pub fn train_linfa_decision_tree(dataset: ALDataset) -> DecisionTree<f64, usize> {
     let tree = DecisionTree::params().fit(&dataset).unwrap();
     let accuracy = tree
@@ -58,15 +63,56 @@ pub fn train_linfa_decision_tree(dataset: ALDataset) -> DecisionTree<f64, usize>
         .accuracy();
     assert!(accuracy > 0.6);
 
-    println!(" Mocking to obtain a DNF Rule...............");
+    println!("Traning AL-specific decision tree ... ");
 
     return tree;
 }
 
-pub fn obtain_query_from_decision_tree(tree: DecisionTree<f64, usize>) {}
+pub fn obtain_predicate_from_decision_tree(
+    tree: DecisionTree<f64, usize>,
+    feature_name: &str,
+    positve_label: usize,
+) -> String {
+    let root = tree.root_node();
+    let (feature_index, thres_hold, impurity_decrease) = root.split();
+
+    if root.is_leaf() {
+        panic!("Decision tree has no splig, no threshold can be extracted.");
+    }
+
+    let children = root.children();
+
+    let left_child = children[0].as_ref().expect("Left child in decision tree.");
+    let right_child = children[1].as_ref().expect("Right child in decision tree.");
+
+    let operator = if left_child.is_leaf() && left_child.prediction() == Some(positve_label) {
+        "<="
+    } else if right_child.is_leaf() && right_child.prediction() == Some(positve_label) {
+        ">"
+    } else {
+        panic!("Operator could not be derived from decision tree.")
+    };
+
+    let predicate = format!(
+        r#"dataFieldName == "{}" AND value {} {:.6}"#,
+        feature_name, operator, thres_hold
+    );
+
+    println!("Deriving predicate rule...: {}", &predicate);
+
+    return predicate;
+}
 
 pub fn generate_query_from_dnf() -> String {
-    let query = r#"CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value > 20.0 ); assert (COUNT(value) > 1);"#;
+    let query = r#"CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ANY VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value > 20.0 ); assert (COUNT(value) > 1);"#;
+    return query.to_string();
+}
+pub fn generate_query_from_textual_predicate(textual_predicate: &str) -> String {
+    let query = format!(
+        r#"CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ANY VehicleData ({}); assert (COUNT(value) > 1);"#,
+        textual_predicate
+    );
+
     return query.to_string();
 }
 
@@ -116,9 +162,28 @@ pub fn check_signature_alignment(issued: Vec<u8>, commited: Vec<u8>) -> bool {
 }
 
 #[test]
-fn hash_generatio() {
+fn hash_generation() {
     let query = r#"'CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value < 50.0 ); assert (COUNT(value) > 20);' "#;
 
     let hash = recalculate_predicate_hash(query);
     assert_eq!(hash, hash);
+}
+
+#[test]
+fn generate_al_model() {
+    let data = base_model_dataset();
+    let al_decision_tree = train_linfa_decision_tree(data);
+}
+#[test]
+fn test_textual_query_specification() {
+    let data = base_model_dataset();
+    let al_decision_tree = train_linfa_decision_tree(data);
+    let predicate = obtain_predicate_from_decision_tree(
+        al_decision_tree,
+        "profiles.targetSOCPercentage",
+        1usize,
+    );
+    let query = generate_query_from_textual_predicate(predicate.as_str());
+
+    println!("{}", query);
 }
