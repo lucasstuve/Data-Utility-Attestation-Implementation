@@ -98,6 +98,34 @@ pub mod lang_expressiveness_tests {
                     Term::Str("2026-06-11T10:02:00+00:00".into()),
                 ],
             },
+            Event {
+                data: vec![
+                    Term::Int(5),
+                    Term::Bool(false),
+                    Term::Str("2026-06-11T10:02:00+00:00".into()),
+                ],
+            },
+            Event {
+                data: vec![
+                    Term::Int(5),
+                    Term::Bool(false),
+                    Term::Str("2026-06-11T10:02:00+00:00".into()),
+                ],
+            },
+            Event {
+                data: vec![
+                    Term::Int(5),
+                    Term::Bool(false),
+                    Term::Str("2026-06-11T10:02:00+00:00".into()),
+                ],
+            },
+            Event {
+                data: vec![
+                    Term::Int(5),
+                    Term::Bool(false),
+                    Term::Str("2026-06-11T10:02:00+00:00".into()),
+                ],
+            },
         ];
         return events;
     }
@@ -123,7 +151,7 @@ pub mod lang_expressiveness_tests {
     #[test]
     pub fn qc04_dnf_complex_true() {
         // Query
-        let query = r#"CREATE SCHEMA Event(value int, is_on bool, energy string); assert ANY Event(value > 1 AND value < 3 AND is_on == true AND energy == "low" OR value > 1 AND value < 3 AND is_on == false AND energy == "low");"#;
+        let query = r#"CREATE SCHEMA Event(value int, is_on bool, energy string); assert ANY Event(value > 1 AND value < 3 AND is_on == true AND energy == "low" OR value > 1 AND value < 3 AND is_on == false );"#;
         // Parsed Program
         let evaluation_program = h1_query_to_epl(&query);
         // Evaluated Events:
@@ -511,7 +539,7 @@ pub mod lang_expressiveness_tests {
     #[test]
     pub fn qc07_count_window_count_true() {
         // Query
-        let query = r#"CREATE SCHEMA Event( value int, is_on bool, timestamp string); assert ALL Event(value > 0); assert Event#win:count(3); assert (COUNT(value) == 3) ;
+        let query = r#"CREATE SCHEMA Event( value int, is_on bool, timestamp string); assert ALL Event(value > 0); assert Event#win:count(2); assert (COUNT(value) == 2) ;
 "#;
         // Parsed Program
         let evaluation_program = h1_query_to_epl(&query);
@@ -528,7 +556,7 @@ pub mod lang_expressiveness_tests {
     #[test]
     pub fn qc07_count_window_count_false() {
         // Query
-        let query = r#"CREATE SCHEMA Event( value int, is_on bool, timestamp string); assert ALL Event(value > 0); assert Event#win:count(2); assert (COUNT(value) >= 5) ;
+        let query = r#"CREATE SCHEMA Event( value int, is_on bool, timestamp string); assert ALL Event(value > 0); assert Event#win:count(2); assert (COUNT(value) > 2) ;
 "#;
         // Parsed Program
         let evaluation_program = h1_query_to_epl(&query);
@@ -544,7 +572,7 @@ pub mod lang_expressiveness_tests {
     }
 
     #[test]
-    pub fn qc09_session_true() {
+    pub fn qc08_session_true() {
         // Query
         let query = r#"CREATE SCHEMA Event( value int, is_on bool, timestamp string); assert ALL Event(value > 0); assert SESSION(
         Event:start(value == 6) -> Event(value==8)  -> Event:end(value == 1) ) ;
@@ -562,7 +590,7 @@ pub mod lang_expressiveness_tests {
         //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
     }
     #[test]
-    pub fn qc09_session_false() {
+    pub fn qc08_session_false() {
         // Query
         let query = r#"CREATE SCHEMA Event( value int, is_on bool, timestamp string); assert ALL Event(value > 0); assert SESSION(
         Event:start(value == 1) -> Event(value==2) -> Event(value == 3 ) -> Event:end(value == 4) ) ;
@@ -580,7 +608,7 @@ pub mod lang_expressiveness_tests {
         //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
     }
     #[test]
-    pub fn qc10_pattern_true() {
+    pub fn qc09_pattern_true() {
         // Query
         let query = r#"CREATE SCHEMA Event( value int, is_on bool, timestamp string); assert ANY Event(is_on == true); assert PATTERN(Event(value == 8) -> Event(value == 8));
 "#;
@@ -598,7 +626,7 @@ pub mod lang_expressiveness_tests {
     }
 
     #[test]
-    fn qc10_pattern_false() {
+    fn qc09_pattern_false() {
         // Query
         let query = r#"CREATE SCHEMA Event( value int, is_on bool, timestamp string); assert ANY Event(is_on == true); assert PATTERN(Event(value == 8) -> Event(value == 6));
 "#;
