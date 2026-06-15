@@ -29,7 +29,7 @@ pub fn check_list(mut list: Vec<(u32, u32)>) -> bool {
         if previous_pair.1 > l.0 {
             overlaps = true;
         }
-        if previous_pair.1 < l.0 {
+        if previous_pair.1 + 1 < l.0 {
             has_gap = true;
         }
 

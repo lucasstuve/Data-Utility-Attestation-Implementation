@@ -109,7 +109,7 @@ pub fn generate_query_from_dnf() -> String {
 }
 pub fn generate_query_from_textual_predicate(textual_predicate: &str) -> String {
     let query = format!(
-        r#"CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ANY VehicleData ({}); assert (COUNT(value) > 1);"#,
+        r#"CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ANY VehicleData ({});"#,
         textual_predicate
     );
 
@@ -157,7 +157,7 @@ pub fn check_commitment(expected: [u8; 32], obtained: [u8; 32]) -> bool {
     expected == obtained
 }
 
-pub fn check_signature_alignment(issued: Vec<u8>, commited: Vec<u8>) -> bool {
+pub fn check_sig_alignment(issued: Vec<u8>, commited: Vec<u8>) -> bool {
     issued == commited
 }
 

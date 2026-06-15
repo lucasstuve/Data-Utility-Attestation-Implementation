@@ -21,10 +21,12 @@ use std::path::Path;
 use std::time::Instant;
 pub fn collect_batch(file: &str, size: u64) -> &str {
     let output_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test_data");
-    generate_data_by_frequency(0.5, file, size, output_dir); //
+    generate_data_by_frequency(0.6, file, size, output_dir); //
     return file;
 }
 pub const USER_BATCH_JSON: &str = include_str!("../test_data/user-batch.json");
+pub const VW_BATCH_JSON: &str = include_str!("../test_data/vw-batch.json");
+pub const USER_BATCH_JSON_POSITIVE: &str = include_str!("../test_data/user-batch-positive.json");
 
 pub fn sign_batch(file: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("test_data");
@@ -57,7 +59,6 @@ pub fn sign_batch(file: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     let public_key_pem = public_key.to_pkcs1_der().unwrap().as_bytes().to_vec();
 
     let signature = singing_key.sign_with_rng(&mut rng, &file_bytes).to_vec();
-    let sig_length: u32 = signature.len().try_into().unwrap();
 
     return (file_bytes, public_key_pem, signature);
 }

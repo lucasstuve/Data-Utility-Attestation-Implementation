@@ -2,11 +2,13 @@ use dnf_core::epl::ProgramAst;
 use dnf_core::input_extractor::{efficient_event_extraction, grap_event_string};
 use methods::{EVAL_AST_ELF, EVAL_AST_ID};
 use system_core::data_consumer::{
-    self, base_model_dataset, check_commitment, check_signature_alignment, generate_query_from_dnf,
+    self, base_model_dataset, check_commitment, check_sig_alignment, generate_query_from_dnf,
     generate_query_from_textual_predicate, obtain_predicate_from_decision_tree,
     recalculate_predicate_hash, train_linfa_decision_tree, verify_attestation,
 };
-use system_core::manufacturer::{self, collect_batch, sign_batch, USER_BATCH_JSON};
+use system_core::manufacturer::{
+    self, collect_batch, sign_batch, USER_BATCH_JSON, USER_BATCH_JSON_POSITIVE, VW_BATCH_JSON,
+};
 
 mod parser;
 mod predata_processor;
@@ -42,27 +44,41 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     // first argument selects the dataset e.g. cargo run -- "user-batch.json"
 
-    println!("\n{}\n", "START DATA UTILITY ATTESTATION PROTOCOL".bold());
+    println!(
+        "\n{}{}",
+        "START DATA UTILITY ATTESTATION PROTOCOL FOR DATASET:".bold(),
+        &args[1]
+    );
 
     phase("PHASE I: Batch provisioning by the MANUFACTURER");
 
-    manufacturer::collect_batch(&args[1], 1);
+    let mut data = "";
+    if (&args[1] == &String::from("vw-batch.json")) {
+        data = &VW_BATCH_JSON
+    } else if &args[1] == &String::from("user-batch.json") {
+        data = &USER_BATCH_JSON
+    } else if &args[1] == &String::from("user-batch-positive.json") {
+        data = &USER_BATCH_JSON_POSITIVE
+    }
+
+    // For test the Manufactuerer data generation is replaced by controlled data batches.
+    //  manufacturer::collect_batch(&args[1], 1);
 
     step(
         1,
         "Manufacturer".red(),
-        "collected user batch: user-batch.json.",
+        &format!("collected user batch: {}", &data),
     );
 
-    let json_batch: serde_json::Value =
-        serde_json::from_str(&USER_BATCH_JSON).expect("JSON invalid.");
+    let json_batch: serde_json::Value = serde_json::from_str(&data).expect("JSON invalid.");
 
     println!("Loaded JSON batch:");
     println!("{:#?}", json_batch);
 
-    let (batch_bytes, pub_key, signature) = manufacturer::sign_batch("user-batch.json");
+    let (batch_bytes, pub_key, signature) = manufacturer::sign_batch(&args[1]);
 
-    step(2, "Manufacturer".red(), "signed: user-batch.json.");
+    let message = format!("signed: {}.", &data);
+    step(2, "Manufacturer".red(), &message);
 
     println!("Signature:");
     println!("{:?}", &signature);
@@ -70,7 +86,7 @@ fn main() {
     step(
         3,
         "Manufacturer".red(),
-        "ships user-batch.json, signature, and public key to the USER.",
+        &format!("ships {}, signature, and public key to the USER.", &data),
     );
 
     phase("PHASE II: Utility rule generation by the DATA CONSUMER");
@@ -78,6 +94,11 @@ fn main() {
     let data_from_base_model = data_consumer::base_model_dataset();
 
     step(4, "Data Consumer".green(), "trains AL base model.");
+
+    println!(
+        "Initial labelled dataset: {:?} ",
+        data_consumer::base_model_dataset()
+    );
 
     step(
         5,
@@ -231,8 +252,7 @@ fn main() {
 
     println!("Commitment holds: {:?}", commit_holds);
 
-    let signature_correctly_used =
-        data_consumer::check_signature_alignment(signature, attestation_sig);
+    let signature_correctly_used = data_consumer::check_sig_alignment(signature, attestation_sig);
 
     step(
         16,
