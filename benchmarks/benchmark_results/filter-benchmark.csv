@@ -1,5 +1,0 @@
-n_events,dsl_case,input_bytes,total_cycles,user_cycles,segments,time_env_s,time_exec_s,time_prov_s,time_veri_ms
-5,"CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == ""profiles.targetSOCPercentage"" AND value < 50.0 );",1096,262144,104244,1,0,77,77,19
-51,"CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == ""profiles.targetSOCPercentage"" AND value < 50.0 );",10321,524288,432493,1,0,138,137,17
-477,"CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == ""profiles.targetSOCPercentage"" AND value < 50.0 );",102437,4227072,3700093,5,0,1259,1259,139
-4704,"CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == ""profiles.targetSOCPercentage"" AND value < 50.0 );",1024068,41418752,36453384,40,0,13538,13536,1147

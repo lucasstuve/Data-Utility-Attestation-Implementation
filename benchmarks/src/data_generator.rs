@@ -213,7 +213,9 @@ pub fn generate_test_data_large(
 ) {
     //  let base = "evaluator_program/benchmarks/test_data";
 
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_data");
+    // crates/system_core/test_data
+
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../crates/system_core/test_data");
 
     let file_path = path.join(file_name);
 
@@ -228,29 +230,65 @@ pub fn generate_test_data_large(
         user_id: uuid,
         data: Vec::new(),
     };
+    let header = format!(
+        "{{\"vin\":\"{}\",\"user_id\":\"{}\",\"data\":[",
+        doc.vin,
+        doc.user_id
+    );
 
+    let footer = "]}";
+    
     let initial_tmstp: DateTime<Utc> = Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
 
     let mut file = File::create(&file_path).unwrap();
 
+     file.write_all(header.as_bytes()).unwrap();
+
+
     let mut event_counter: u64 = 0;
+
+  
+
+    let mut  new_size = (header.as_bytes().len() + footer.as_bytes().len()) as u64; 
 
     loop {
         let event = generate_random_event(initial_tmstp);
-        doc.data.push(event);
-        event_counter = event_counter + 1;
-        let json_string = serde_json::to_string(&doc).unwrap();
+      //   doc.data.push(event.clone());
 
-        let new_size = json_string.len() as u64;
 
-        if event_counter % 10000 == 0 {
-            if new_size > file_size_kb * 1024 {
-                doc.data.pop();
-                let final_json = serde_json::to_string(&doc).unwrap();
-                file.write_all(final_json.as_bytes()).unwrap();
-                file.flush().unwrap();
+ 
+
+ let first_event = event_counter == 0; 
+
+ let comma_size = if first_event {0} else {1}; 
+
+
+   let event_size = serde_json::to_string(&event).unwrap().len() as u64; 
+
+    
+       
+     
+
+        // let json_string = serde_json::to_string(&doc).unwrap();
+
+        
+    
+     if new_size + event_size + comma_size > file_size_kb * 1024 {
+                file.write_all(footer.as_bytes()).unwrap();
+                file.flush().unwrap();  
+              
                 break;
-            }
+            
+        }
+                         if !first_event {
+    file.write_all(b",").unwrap();
+}
+        serde_json::to_writer(&mut file, &event).unwrap();
+        event_counter = event_counter + 1;
+        new_size = new_size + comma_size +  event_size; 
+
+       if event_counter % 10_000 == 0 {
+            file.flush().unwrap();
         }
     }
 }

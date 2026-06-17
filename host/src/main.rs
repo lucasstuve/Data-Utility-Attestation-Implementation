@@ -7,7 +7,7 @@ use system_core::data_consumer::{
     recalculate_predicate_hash, train_linfa_decision_tree, verify_attestation,
 };
 use system_core::manufacturer::{
-    self, collect_batch, sign_batch, USER_BATCH_JSON, USER_BATCH_JSON_POSITIVE, VW_BATCH_JSON,
+    self, collect_batch, sign_batch, USER_BATCH_JSON, VW_BATCH_JSON,BATCH_JSON_10MB, BATCH_JSON_1000MB, BATCH_JSON_100MB
 };
 
 mod parser;
@@ -18,9 +18,13 @@ use predata_processor::create_events_indexes;
 use risc0_zkvm::{default_prover, ExecutorEnv};
 
 use colored::{ColoredString, Colorize};
+use core::time;
 use std::env;
 use std::time::Instant;
 use std::{str, thread, time::Duration};
+use benchmarks::performance_benchmarks::{write_results_csv, Row}; 
+
+
 
 fn separator() {
     println!("\n{}\n", "-".repeat(94));
@@ -44,6 +48,8 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     // first argument selects the dataset e.g. cargo run -- "user-batch.json"
 
+    let mut bench: Row = Row::new();
+
     println!(
         "\n{}{}",
         "START DATA UTILITY ATTESTATION PROTOCOL FOR DATASET:".bold(),
@@ -54,11 +60,17 @@ fn main() {
 
     let mut data = "";
     if (&args[1] == &String::from("vw-batch.json")) {
-        data = &VW_BATCH_JSON
+        data = &VW_BATCH_JSON; 
     } else if &args[1] == &String::from("user-batch.json") {
-        data = &USER_BATCH_JSON
-    } else if &args[1] == &String::from("user-batch-positive.json") {
-        data = &USER_BATCH_JSON_POSITIVE
+        data = &USER_BATCH_JSON; } 
+    else if &args[1] == &String::from("test-data-10-MB.json") {
+        data = &BATCH_JSON_10MB; 
+    }
+    else if &args[1] == &String::from("test-data-100-MB.json") {
+        data = &BATCH_JSON_100MB; 
+    }
+    else if &args[1] == &String::from("test-data-1000-MB.json") {
+        data = &BATCH_JSON_1000MB; 
     }
 
     // For test the Manufactuerer data generation is replaced by controlled data batches.
@@ -201,7 +213,7 @@ fn main() {
     let prove_info = prover.prove(env, EVAL_AST_ELF).unwrap();
     let receipt = prove_info.receipt;
 
-    let proving_time = env_timer.elapsed();
+    let proving_time = env_timer.elapsed().as_secs();
 
     println!("Proof generation completed.");
     println!("Proving time: {:?}", proving_time);
@@ -220,9 +232,11 @@ fn main() {
         "verifies received Attestation.",
     );
 
+    let verify_timer = Instant::now(); 
+
     let (result, attestation_commit, attestation_sig) =
         data_consumer::verify_attestation(&receipt, EVAL_AST_ID);
-
+       let verify_attest_time =  verify_timer.elapsed().as_millis(); 
     step(
         13,
         "Data Consumer".green(),
@@ -286,4 +300,19 @@ fn main() {
     }
 
     println!("\n{}\n", "END DATA UTILITY ATTESTATION PROTOCOL".bold());
+
+   
+
+    bench.set_dsl_query(&args[1]);
+    bench.set_segments(prove_info.stats.segments as u32);
+    bench.set_user_cycles(prove_info.stats.user_cycles as u32);
+    bench.set_total_cycles(prove_info.stats.total_cycles as u32);
+    bench.set_prove_time(proving_time as u32);
+    bench.set_veri_time(verify_attest_time as u64 );
+    bench.set_input_bytes(batch_bytes.len() as u64 );
+
+    write_results_csv(vec![bench], "end-to-end-benchmarks.csv").unwrap(); 
+
+
+
 }

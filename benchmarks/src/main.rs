@@ -31,5 +31,8 @@ fn main() {
     generate_data_by_frequency(0.95, "test-data-95-percent.json", 100);
     generate_data_by_frequency(1.0, "test-data-100-percent.json", 100); */
 
-    generate_test_data_large(64 * 1024, "test-data-64-MB.json", 0.0, 0.0, 0.0);
+   //  generate_test_data_large(64 * 1024, "test-data-64-MB.json", 0.0, 0.0, 0.0);
+    generate_test_data_large(10*1024, "test-data-10-MB.json", 0.0, 0.0, 0.0);
+    generate_test_data_large(100*1024, "test-data-100-MB.json", 0.0, 0.0, 0.0);
+    generate_test_data_large(1000*1024, "test-data-1000-MB.json", 0.0, 0.0, 0.0);
 }

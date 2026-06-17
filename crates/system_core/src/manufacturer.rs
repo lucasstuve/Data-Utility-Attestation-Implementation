@@ -26,7 +26,10 @@ pub fn collect_batch(file: &str, size: u64) -> &str {
 }
 pub const USER_BATCH_JSON: &str = include_str!("../test_data/user-batch.json");
 pub const VW_BATCH_JSON: &str = include_str!("../test_data/vw-batch.json");
-pub const USER_BATCH_JSON_POSITIVE: &str = include_str!("../test_data/user-batch-positive.json");
+// pub const USER_BATCH_JSON_POSITIVE: &str = include_str!("../test_data/user-batch-positive.json");
+ pub const BATCH_JSON_10MB: &str = include_str!("../test_data/test-data-10-MB.json");
+ pub const BATCH_JSON_100MB: &str = include_str!("../test_data/test-data-100-MB.json");
+ pub const BATCH_JSON_1000MB: &str = include_str!("../test_data/test-data-1000-MB.json");
 
 pub fn sign_batch(file: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("test_data");
