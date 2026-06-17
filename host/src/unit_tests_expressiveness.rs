@@ -22,34 +22,34 @@ pub mod lang_expressiveness_tests {
     fn events_1() -> Vec<Event> {
         let events = vec![
             Event {
-                data: vec![Term::Int(8), Term::Bool(true), Term::Str("low".into())],
+                data: vec![Term::Int(8), Term::Bool(true), Term::Str("low".into() ), Term::Float(43.00) ],
             },
             Event {
-                data: vec![Term::Int(6), Term::Bool(true), Term::Str("low".into())],
+                data: vec![Term::Int(6), Term::Bool(true), Term::Str("low".into()), Term::Float(4.00)],
             },
             Event {
-                data: vec![Term::Int(8), Term::Bool(true), Term::Str("high".into())],
+                data: vec![Term::Int(8), Term::Bool(true), Term::Str("high".into()), Term::Float(456.00)],
             },
             Event {
-                data: vec![Term::Int(2), Term::Bool(false), Term::Str("low".into())],
+                data: vec![Term::Int(2), Term::Bool(false), Term::Str("low".into()), Term::Float(93.00)],
             },
             Event {
-                data: vec![Term::Int(1), Term::Bool(true), Term::Str("medium".into())],
+                data: vec![Term::Int(1), Term::Bool(true), Term::Str("medium".into()), Term::Float(3.50)],
             },
             Event {
-                data: vec![Term::Int(5), Term::Bool(true), Term::Str("low".into())],
+                data: vec![Term::Int(5), Term::Bool(true), Term::Str("low".into()), Term::Float(3.55)],
             },
             Event {
-                data: vec![Term::Int(6), Term::Bool(false), Term::Str("high".into())],
+                data: vec![Term::Int(6), Term::Bool(false), Term::Str("high".into()), Term::Float(30.20)],
             },
             Event {
-                data: vec![Term::Int(9), Term::Bool(true), Term::Str("low".into())],
+                data: vec![Term::Int(9), Term::Bool(true), Term::Str("low".into()), Term::Float(4.77)],
             },
             Event {
-                data: vec![Term::Int(5), Term::Bool(true), Term::Str("high".into())],
+                data: vec![Term::Int(5), Term::Bool(true), Term::Str("high".into()), Term::Float(4.80)],
             },
             Event {
-                data: vec![Term::Int(10), Term::Bool(true), Term::Str("low".into())],
+                data: vec![Term::Int(10), Term::Bool(true), Term::Str("low".into()), Term::Float(9.10)],
             },
         ];
         return events;
@@ -208,6 +208,112 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
     }
+
+    #[test]
+    pub fn qc03_int_true(){
+            // Query
+        let query = r#"CREATE SCHEMA Event(value int, is_on bool, energy string); assert ANY Event(value == 6); 
+"#;
+        // Parsed Program
+        let evaluation_program = h1_query_to_epl(&query);
+        // Evaluated Events:
+        let events = events_1();
+        // Evaluation Result:
+        let eval_result = eval_program(&evaluation_program.unwrap(), &events);
+
+        // Comparision of expected with actual evaluation result.
+        assert_eq!(eval_result, true);
+
+    }
+     #[test]
+    pub fn qc03_int_false(){
+            // Query
+        let query = r#"CREATE SCHEMA Event(value int, is_on bool, energy string); assert ANY Event(value == 99); 
+"#;
+        // Parsed Program
+        let evaluation_program = h1_query_to_epl(&query);
+        // Evaluated Events:
+        let events = events_1();
+        // Evaluation Result:
+        let eval_result = eval_program(&evaluation_program.unwrap(), &events);
+
+        // Comparision of expected with actual evaluation result.
+        assert_eq!(eval_result, false);
+
+    }
+
+
+    #[test]
+    pub fn qc03_float_false(){
+             // Query
+        let query = r#"CREATE SCHEMA Event(value int, is_on bool, energy string, amount float); assert ANY Event(amount == 93.10); 
+"#;
+        // Parsed Program
+        let evaluation_program = h1_query_to_epl(&query);
+        // Evaluated Events:
+        let events = events_1();
+        // Evaluation Result:
+        let eval_result = eval_program(&evaluation_program.unwrap(), &events);
+
+        // Comparision of expected with actual evaluation result.
+        assert_eq!(eval_result, false);
+    }
+
+    #[test]
+    pub fn qc03_float_true(){
+              // Query
+        let query = r#"CREATE SCHEMA Event(value int, is_on bool, energy string, amount float); assert ANY Event(amount == 93.00); 
+"#;
+        // Parsed Program
+        let evaluation_program = h1_query_to_epl(&query);
+        // Evaluated Events:
+        let events = events_1();
+        // Evaluation Result:
+        let eval_result = eval_program(&evaluation_program.unwrap(), &events);
+
+        // Comparision of expected with actual evaluation result.
+        assert_eq!(eval_result, true);
+
+    }
+     
+
+      #[test]
+    pub fn qc03_bool_true(){
+                 // Query
+        let query = r#"CREATE SCHEMA Event(value int, is_on bool, energy string, amount float); assert ANY Event(is_on == true); 
+"#;
+        // Parsed Program
+        let evaluation_program = h1_query_to_epl(&query);
+        // Evaluated Events:
+        let events = events_1();
+        // Evaluation Result:
+        let eval_result = eval_program(&evaluation_program.unwrap(), &events);
+
+        // Comparision of expected with actual evaluation result.
+        assert_eq!(eval_result, true);
+
+
+    }
+    #[test]
+    pub fn qc03_bool_false(){
+                         // Query
+        let query = r#"CREATE SCHEMA Event(value int, is_on bool, energy string, amount float); assert ANY Event(is_on != true OR is_on != false); 
+"#;
+        // Parsed Program
+        let evaluation_program = h1_query_to_epl(&query);
+        // Evaluated Events:
+        let events = events_1();
+        // Evaluation Result:
+        let eval_result = eval_program(&evaluation_program.unwrap(), &events);
+
+        // Comparision of expected with actual evaluation result.
+        assert_eq!(eval_result, true);
+
+        
+    }
+
+
+
     #[test]
     pub fn qc04_string_or_any_true() {
         // Query
