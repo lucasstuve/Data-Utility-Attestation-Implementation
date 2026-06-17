@@ -25,6 +25,7 @@ use alloc::vec::Vec;
 use alloc::{string::String, vec};
 use dnf_core::{
     epl::ProgramAst,
+    index_list_validator::check_list,
     input_extractor::{efficient_event_extraction, grap_event_string},
     interpreter::{eval_program, Event},
 };
@@ -36,9 +37,18 @@ use rsa::{
     pkcs1v15::{Signature as RsaSignature, VerifyingKey},
     RsaPublicKey,
 };
-use sha2::Sha256;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 risc0_zkvm::guest::entry!(main);
+
+#[derive(Serialize, Deserialize)]
+pub struct Journal {
+    pub evaluation_result: bool,
+    pub logic_commitment: [u8; 32],
+    pub signature: Vec<u8>,
+    pub number_of_events: u32,
+}
 
 fn main() {
     // read AST Input for evaluation
@@ -65,7 +75,7 @@ fn main() {
 
     let byte_slice = bytes.as_slice();
 
-    for index in index_list {
+    for &index in &index_list {
         let event = efficient_event_extraction(
             schema0.clone(),
             grap_event_string(index, byte_slice).as_bytes(),
@@ -84,11 +94,22 @@ fn main() {
 
     let sig_veri_result = verifying_key.verify(&byte_slice, &sig).is_ok();
 
+    let digest = Sha256::digest(epl.to_bytes());
+    let mut evaluation_logic_commitment = [0u8; 32];
+    evaluation_logic_commitment.copy_from_slice(&digest);
+
     // start the evaluator to obtain the boolean result over all event data
-    let result = eval_program(&epl, &events) && sig_veri_result;
+    let result = eval_program(&epl, &events) && sig_veri_result && check_list(index_list);
 
     // Commit the programs result to the journal
 
+    let journal = Journal {
+        evaluation_result: result,
+        logic_commitment: evaluation_logic_commitment,
+        signature,
+        number_of_events,
+    };
+
     //  env::commit(&result);
-    env::commit(&number_of_events);
+    env::commit(&journal);
 }

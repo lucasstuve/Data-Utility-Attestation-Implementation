@@ -1,4 +1,5 @@
 .DS_Store
 Cargo.lock
+benchmarks/test_data/test-data-100MB.json
 methods/guest/Cargo.lock
 target/

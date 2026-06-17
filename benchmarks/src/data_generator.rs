@@ -250,11 +250,14 @@ pub fn generate_test_data_large(
         let event = generate_random_event(initial_tmstp);
         doc.data.push(event);
         event_counter = event_counter + 1;
-        let json_string = serde_json::to_string(&doc).unwrap();
+        //   let json_string = serde_json::to_string(&doc).unwrap();
 
-        let new_size = json_string.len() as u64;
+        //   let new_size = json_string.len() as u64;
 
-        if event_counter % 10000 == 0 {
+        if event_counter % 1000 == 0 {
+            let json_string = serde_json::to_string(&doc).unwrap();
+            let new_size = json_string.len() as u64;
+
             if new_size > file_size_kb * 1024 {
                 doc.data.pop();
                 let final_json = serde_json::to_string(&doc).unwrap();
