@@ -49,11 +49,7 @@ pub fn base_model_dataset() -> ALDataset {
     return data_set;
 }
 
-/*
 
-pub fn train_decision_tree_classifier() {
-    println!(" Mocking to obtain a DNF Rule...............");
-}*/
 pub fn train_linfa_decision_tree(dataset: ALDataset) -> DecisionTree<f64, usize> {
     let tree = DecisionTree::params().fit(&dataset).unwrap();
     let accuracy = tree
