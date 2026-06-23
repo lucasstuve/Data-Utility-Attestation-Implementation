@@ -85,13 +85,13 @@ pub fn efficient_event_extraction(schema: Schema, raw_event: &[u8]) -> Option<Ev
 
         match a.i_type {
             Itype::Float => {
-                if s.chars().all(|c| c.is_ascii_digit() || c == '.') {
+                if !s.is_empty() && s.chars().all(|c| c.is_ascii_digit() || c == '.') {
                     let attr_parsed = bytes_to_term(a.i_type, &raw_event[start..abs_end]);
                     e_data.push(attr_parsed);
                 }
             }
             Itype::Int => {
-                if s.chars().all(|c| c.is_ascii_digit()) {
+                if !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()) {
                     let attr_parsed = bytes_to_term(a.i_type, &raw_event[start..abs_end]);
                     e_data.push(attr_parsed);
                 }
