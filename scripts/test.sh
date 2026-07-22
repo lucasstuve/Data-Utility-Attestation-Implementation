@@ -9,7 +9,7 @@ QUERY='CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL
 RESULTS_FILE="test.csv"
 
 cd "$PROJECT_ROOT"
-export RISC0_DEV_MODE=0
+export RISC0_DEV_MODE=1
 
 for DATA_SET in "${DATA_SETS[@]}"; do 
 echo -e "\e[1mSTART benchmark for:\e[0m"

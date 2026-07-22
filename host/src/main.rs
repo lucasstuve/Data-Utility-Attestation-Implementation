@@ -4,11 +4,14 @@ use methods::{EVAL_AST_ELF, EVAL_AST_ID};
 use system_core::data_consumer::{
     self, base_model_dataset, check_commitment, check_sig_alignment, generate_query_from_dnf,
     generate_query_from_textual_predicate, obtain_predicate_from_decision_tree,
-    recalculate_predicate_hash, train_linfa_decision_tree, verify_attestation,
+    recalculate_predicate_hash, train_linfa_decision_tree, verify_attestation, recompute_image_id, validate_image_id
 };
 use system_core::manufacturer::{
     self, collect_batch, sign_batch, USER_BATCH_JSON, VW_BATCH_JSON,BATCH_JSON_10MB, BATCH_JSON_1000MB, BATCH_JSON_100MB
 };
+
+
+// DEV_MODE=1  cargo run -p host --release -- "test-data-10-MB.json"  // Run this command to test illustrate the end-to-end system with CPU
 
 mod parser;
 mod predata_processor;
@@ -277,6 +280,20 @@ fn main() {
     println!(
         "Signature belongs to Manufacturer: {}",
         signature_correctly_used
+    );
+
+    step(
+        17,
+        "Data Consumer".green(),
+        "recomputes image ID based on audited program & compares it with receipt image id.",
+    );
+
+    let recomputed_id = data_consumer::recompute_image_id(); 
+    let recomputed_id_matches  = data_consumer::validate_image_id(EVAL_AST_ID, recomputed_id.unwrap()); 
+
+    println!(
+        "ZK-Attestation proofs corresponds to the provided receipt: {}",
+        recomputed_id_matches
     );
 
     phase("PHASE VI: Final purchase decision");

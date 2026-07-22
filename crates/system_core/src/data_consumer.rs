@@ -9,9 +9,14 @@ use linfa_trees::DecisionTree;
 use ndarray::array;
 use ndarray::{Array1, Array2};
 use risc0_zkvm::Receipt;
-use risc0_zkvm::{default_prover, ExecutorEnv};
+use risc0_zkvm::compute_image_id;
+use risc0_zkvm::{default_prover, ExecutorEnv, sha::Digest as Risc0Digest};
 use serde::{Deserialize, Serialize};
 use sha2::{digest, Digest, Sha256};
+use methods::{EVAL_AST_ELF};
+
+
+
 
 pub type ALDataset = DatasetBase<Array2<f64>, Array1<usize>>;
 
@@ -155,6 +160,14 @@ pub fn check_commitment(expected: [u8; 32], obtained: [u8; 32]) -> bool {
 
 pub fn check_sig_alignment(issued: Vec<u8>, commited: Vec<u8>) -> bool {
     issued == commited
+}
+
+pub fn recompute_image_id() -> Result<Risc0Digest, Box<dyn std::error::Error>> {
+    Ok(compute_image_id(EVAL_AST_ELF)?) 
+}
+pub fn validate_image_id(prover_id: [u32; 8], recomputed_id: Risc0Digest) -> bool{
+    return Risc0Digest::from(prover_id) == recomputed_id;
+
 }
 
 #[test]
