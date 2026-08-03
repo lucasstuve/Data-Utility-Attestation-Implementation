@@ -289,7 +289,8 @@ fn main() {
     );
 
     let recomputed_id = data_consumer::recompute_image_id(); 
-    let recomputed_id_matches  = data_consumer::validate_image_id(EVAL_AST_ID, recomputed_id.unwrap()); 
+    let image_id_from_receipt = data_consumer::get_image_id_from_receipt(&receipt); 
+    let recomputed_id_matches  = data_consumer::validate_image_id(image_id_from_receipt , recomputed_id.unwrap()); 
 
     println!(
         "ZK-Attestation proofs corresponds to the provided receipt: {}",
@@ -304,7 +305,7 @@ fn main() {
         "decides whether to buy the data based on Manufacturer signature, committed P, and evaluation result.",
     );
 
-    if commit_holds && signature_correctly_used && result {
+    if commit_holds && signature_correctly_used && recomputed_id_matches && result {
         println!(
             "{}: requests purchase of the batch B_raw.",
             "Data Consumer".green()
