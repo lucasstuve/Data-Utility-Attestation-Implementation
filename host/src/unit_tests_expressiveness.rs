@@ -297,7 +297,7 @@ pub mod lang_expressiveness_tests {
     #[test]
     pub fn qc03_bool_false(){
                          // Query
-        let query = r#"CREATE SCHEMA Event(value int, is_on bool, energy string, amount float); assert ANY Event(is_on != true OR is_on != false); 
+        let query = r#"CREATE SCHEMA Event(value int, is_on bool, energy string, amount float); assert ANY Event(is_on != true AND is_on != false); 
 "#;
         // Parsed Program
         let evaluation_program = h1_query_to_epl(&query);
@@ -307,7 +307,7 @@ pub mod lang_expressiveness_tests {
         let eval_result = eval_program(&evaluation_program.unwrap(), &events);
 
         // Comparision of expected with actual evaluation result.
-        assert_eq!(eval_result, true);
+        assert_eq!(eval_result, false);
 
         
     }
