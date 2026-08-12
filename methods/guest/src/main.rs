@@ -1,34 +1,16 @@
-/*#![no_main]
-extern crate alloc;
-
-use risc0_zkvm::guest::env;
-//use rsa::{pkcs1::DecodeRsaPublicKey, pkcs8::DecodePublicKey, RsaPublicKey};
-//use rsa::pkcs1v15::VerifyingKey;
-//use rsa::pkcs1v15::Signature as RsaSignature;
-//use rsa::pkcs1::DecodeRsaPublicKey;
-//use rsa::RsaPublicKey;
-
-risc0_zkvm::guest::entry!(main);
-
-fn main() {
-    let ok = true;
-    env::commit(&ok);
-}
-
-*/
-
-//#![no_std]
 #![no_main]
 extern crate alloc;
 
 use alloc::vec::Vec;
 use alloc::{string::String, vec};
+
 use dnf_core::{
     epl::ProgramAst,
     index_list_validator::check_list,
     input_extractor::{efficient_event_extraction, grap_event_string},
     interpreter::{eval_program, Event},
 };
+
 use risc0_zkvm::guest::env;
 
 use rsa::signature::Verifier;
@@ -39,9 +21,11 @@ use rsa::{
     pkcs1v15::{Signature as RsaSignature, VerifyingKey},
     RsaPublicKey,
 };
+
 use sha2::{Digest, Sha256};
 
 risc0_zkvm::guest::entry!(main);
+
 
 #[derive(Serialize, Deserialize)]
 pub struct Journal {
@@ -51,12 +35,15 @@ pub struct Journal {
     pub number_of_events: u32,
 }
 
+
 fn main() {
-    // read AST Input for evaluation
+    // Read AST input for evaluation
     let epl: ProgramAst = env::read();
+
     let input_len: u32 = env::read();
     let mut bytes = alloc::vec![0u8; input_len as usize];
     env::read_slice(bytes.as_mut_slice());
+
     let index_list: Vec<(u32, u32)> = env::read();
 
     let pub_key_len: u32 = env::read();
@@ -67,14 +54,28 @@ fn main() {
     let mut signature = alloc::vec![0u8; sig_length];
     env::read_slice(&mut signature);
 
+    let byte_slice = bytes.as_slice();
+
+
+    // Verify Manufacturer signature over raw batch
+    let pub_key = RsaPublicKey::from_pkcs1_der(&pub_key_pem).unwrap();
+    let verifying_key = VerifyingKey::<Sha256>::new(pub_key);
+    let sig = RsaSignature::try_from(signature.as_slice()).unwrap();
+
+    let sig_veri_result = verifying_key.verify(&byte_slice, &sig).is_ok();
+
+
+    // Validate supplied event index list
+    let index_list_valid = check_list(index_list.clone());
+
+
+    // Extract events from the raw batch
     let mut events: Vec<Event> = alloc::vec![];
 
     let schema0 = epl
         .schemas
         .get(0)
         .expect("schema[0] is not valid or missing");
-
-    let byte_slice = bytes.as_slice();
 
     for index in index_list.clone() {
         let event = efficient_event_extraction(
@@ -89,21 +90,22 @@ fn main() {
 
     let number_of_events: u32 = events.len().try_into().unwrap();
 
-    let pub_key = RsaPublicKey::from_pkcs1_der(&pub_key_pem).unwrap();
-    let verifying_key = VerifyingKey::<Sha256>::new(pub_key);
-    let sig = RsaSignature::try_from(signature.as_slice()).unwrap();
 
-    let sig_veri_result = verifying_key.verify(&byte_slice, &sig).is_ok();
+    // Evaluate the utility predicate over the extracted events
+    let utility_result = eval_program(&epl, &events);
 
+
+    // Compute commitment to the evaluation logic
     let digest = Sha256::digest(epl.to_bytes());
     let mut evaluation_logic_commitment = [0u8; 32];
     evaluation_logic_commitment.copy_from_slice(&digest);
 
-    // start the evaluator to obtain the boolean result over all event data
-    let result = eval_program(&epl, &events) && sig_veri_result && check_list(index_list);
 
-    // Commit the programs result to the journal
+    // Construct the final evaluation result
+    let result = utility_result && sig_veri_result && index_list_valid;
 
+
+    // Commit the program result to the journal
     let journal = Journal {
         evaluation_result: result,
         logic_commitment: evaluation_logic_commitment,

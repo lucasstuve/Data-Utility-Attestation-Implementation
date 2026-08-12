@@ -6,6 +6,7 @@ use system_core::data_consumer::{
     generate_query_from_textual_predicate, obtain_predicate_from_decision_tree,
     recalculate_predicate_hash, train_linfa_decision_tree, verify_attestation, recompute_image_id, validate_image_id
 };
+use system_core::data_consumer as al_company;
 use system_core::manufacturer::{
     self, collect_batch, sign_batch, USER_BATCH_JSON, VW_BATCH_JSON,BATCH_JSON_10MB, BATCH_JSON_1000MB, BATCH_JSON_100MB
 };
@@ -104,25 +105,25 @@ fn main() {
         &format!("ships {}, signature, and public key to the USER.", &data),
     );
 
-    phase("PHASE II: Utility rule generation by the DATA CONSUMER");
+    phase("PHASE II: Utility rule generation by the Predictive-Maintenance Company");
 
-    let data_from_base_model = data_consumer::base_model_dataset();
+    let data_from_base_model = al_company::base_model_dataset();
 
-    step(4, "Data Consumer".green(), "trains AL base model.");
+    step(4, "Predictive-Maintenance Company".green(), "trains AL base model.");
 
     println!(
         "Initial labelled dataset: {:?} ",
-        data_consumer::base_model_dataset()
+        al_company::base_model_dataset()
     );
 
     step(
         5,
-        "Data Consumer".green(),
+        "Predictive-Maintenance Company".green(),
         "obtains utility rules as DNF from decision tree classifier.",
     );
 
-    let decision_tree = data_consumer::train_linfa_decision_tree(data_from_base_model);
-    let textual_predicate = data_consumer::obtain_predicate_from_decision_tree(
+    let decision_tree = al_company::train_linfa_decision_tree(data_from_base_model);
+    let textual_predicate = al_company::obtain_predicate_from_decision_tree(
         decision_tree,
         "profiles.targetSOCPercentage",
         1usize,
@@ -130,11 +131,11 @@ fn main() {
 
     step(
         6,
-        "Data Consumer".green(),
+        "Predictive-Maintenance Company".green(),
         "generates query from predicate rules.",
     );
 
-    let query = data_consumer::generate_query_from_textual_predicate(&textual_predicate);
+    let query = al_company::generate_query_from_textual_predicate(&textual_predicate);
     println!("Generated query:");
     println!("{}", query);
 
@@ -224,25 +225,25 @@ fn main() {
     step(
         11,
         "USER".purple(),
-        "passes Attestation to the Data Consumer.",
+        "passes Attestation to the Predictive-Maintenance Company.",
     );
 
-    phase("PHASE V: Verification by the DATA CONSUMER");
+    phase("PHASE V: Verification by the Predictive-Maintenance Company");
 
     step(
         12,
-        "Data Consumer".green(),
+        "Predictive-Maintenance Company".green(),
         "verifies received Attestation.",
     );
 
     let verify_timer = Instant::now(); 
 
     let (result, attestation_commit, attestation_sig) =
-        data_consumer::verify_attestation(&receipt, EVAL_AST_ID);
+        al_company::verify_attestation(&receipt, EVAL_AST_ID);
        let verify_attest_time =  verify_timer.elapsed().as_millis(); 
     step(
         13,
-        "Data Consumer".green(),
+        "Predictive-Maintenance Company".green(),
         "extracts the Utility Attestation result, commitment of parsed and hashed P, and signature.",
     );
 
@@ -253,27 +254,27 @@ fn main() {
 
     step(
         14,
-        "Data Consumer".green(),
+        "Predictive-Maintenance Company".green(),
         "recomputes the commitment using the query.",
     );
 
-    let expected_commitment = data_consumer::recalculate_predicate_hash(&query);
+    let expected_commitment = al_company::recalculate_predicate_hash(&query);
 
-    let commit_holds = data_consumer::check_commitment(expected_commitment, attestation_commit);
+    let commit_holds = al_company::check_commitment(expected_commitment, attestation_commit);
 
     step(
         15,
-        "Data Consumer".green(),
+        "Predictive-Maintenance Company".green(),
         "checks that committed P used for Attestation matches recomputed P.",
     );
 
     println!("Commitment holds: {:?}", commit_holds);
 
-    let signature_correctly_used = data_consumer::check_sig_alignment(signature, attestation_sig);
+    let signature_correctly_used = al_company::check_sig_alignment(signature, attestation_sig);
 
     step(
         16,
-        "Data Consumer".green(),
+        "Predictive-Maintenance Company".green(),
         "checks that the Signature committed in the Attestation belongs to the Manufacturer.",
     );
 
@@ -284,7 +285,7 @@ fn main() {
 
     step(
         17,
-        "Data Consumer".green(),
+        "Predictive-Maintenance Company".green(),
         "recomputes image ID based on audited program & compares it with receipt image id.",
     );
 
@@ -301,19 +302,19 @@ fn main() {
 
     step(
         17,
-        "Data Consumer".green(),
+        "Predictive-Maintenance Company".green(),
         "decides whether to buy the data based on Manufacturer signature, committed P, and evaluation result.",
     );
 
     if commit_holds && signature_correctly_used && recomputed_id_matches && result {
         println!(
             "{}: requests purchase of the batch B_raw.",
-            "Data Consumer".green()
+            "Predictive-Maintenance Company".green()
         );
     } else {
         println!(
             "{}: rejects purchase of the batch B_raw.",
-            "Data Consumer".green()
+            "Predictive-Maintenance Company".green()
         );
     }
 
