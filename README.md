@@ -11,3 +11,8 @@ This repository's evaluation work lives on two branches, not `main`:
 
 Check out the branch you want; each has its own `README.md` with full
 build/run instructions (Docker included).
+
+
+## Acknowledgments
+Built on the [RISC Zero](https://github.com/risc0/risc0) zkVM and its
+project template (Apache License 2.0).
