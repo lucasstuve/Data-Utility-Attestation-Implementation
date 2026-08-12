@@ -26,6 +26,10 @@ RUN rzup install
 WORKDIR /app
 COPY . .
 
+# Normalize line endings in case the build context came from a Windows
+# checkout (CRLF breaks bash's `set -euo pipefail`)
+RUN find . -name "*.sh" -type f -exec sed -i 's/\r$//' {} \;
+
 # Resolves rust-toolchain.toml and builds host + benchmarks (and, via
 # methods/build.rs, cross-compiles the guest) so the image is ready to run.
 RUN cargo build --release -p host -p benchmarks
