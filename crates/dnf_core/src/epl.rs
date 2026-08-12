@@ -22,6 +22,14 @@ pub struct ProgramAst {
     pub session: Option<Session>,
 }
 
+impl ProgramAst {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = alloc::format!("{:?}", self).into_bytes();
+        return bytes;
+    }
+}
+
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Session {
     pub identifier: String,

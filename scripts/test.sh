@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-DATA_SETS=("test-data-5-percent.json")
+DATA_SETS=("test-data-1KB.json")
 QUERY='CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == "mileage" AND value > 120.0 );'
 RESULTS_FILE="test.csv"
 

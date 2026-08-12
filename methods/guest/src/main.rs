@@ -27,7 +27,10 @@ use dnf_core::{
     epl::ProgramAst,
     input_extractor::{efficient_event_extraction, grap_event_string},
     interpreter::{eval_program, Event},
+    index_list_validator::check_list,
 };
+use sha2::{Digest, Sha256};
+
 use risc0_zkvm::guest::env;
 use rsa::signature::Verifier;
 
@@ -36,9 +39,17 @@ use rsa::{
     pkcs1v15::{Signature as RsaSignature, VerifyingKey},
     RsaPublicKey,
 };
-use sha2::Sha256;
+use serde::{Deserialize, Serialize};
 
 risc0_zkvm::guest::entry!(main);
+
+#[derive(Serialize, Deserialize)]
+pub struct Journal {
+    pub evaluation_result: bool,
+    pub logic_commitment: [u8; 32],
+    pub signature: Vec<u8>,
+    pub number_of_events: u32,
+}
 
 fn main() {
     // read AST Input for evaluation
@@ -65,7 +76,7 @@ fn main() {
 
     let byte_slice = bytes.as_slice();
 
-    for index in index_list {
+    for index in index_list.clone() {
         let event = efficient_event_extraction(
             schema0.clone(),
             grap_event_string(index, byte_slice).as_bytes(),
@@ -78,17 +89,24 @@ fn main() {
 
     let number_of_events: u32 = events.len().try_into().unwrap();
 
+    
+
     let pub_key = RsaPublicKey::from_pkcs1_der(&pub_key_pem).unwrap();
     let verifying_key = VerifyingKey::<Sha256>::new(pub_key);
     let sig = RsaSignature::try_from(signature.as_slice()).unwrap();
 
     let sig_veri_result = verifying_key.verify(&byte_slice, &sig).is_ok();
 
+        // Compute commitment to the evaluation logic
+    let digest = Sha256::digest(epl.to_bytes());
+    let mut evaluation_logic_commitment = [0u8; 32];
+    evaluation_logic_commitment.copy_from_slice(&digest);
+
     // start the evaluator to obtain the boolean result over all event data
-    let result = eval_program(&epl, &events) && sig_veri_result;
+    let result = eval_program(&epl, &events) && sig_veri_result && check_list(index_list);
 
-    // Commit the programs result to the journal
 
-    //  env::commit(&result);
+    // Commit the program result to the journal
+
     env::commit(&number_of_events);
 }
