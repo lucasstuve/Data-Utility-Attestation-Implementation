@@ -1,102 +1,102 @@
-# RISC Zero Rust DNF Parser
+# Data Utility Attestation — End-to-End System
 
-An exploratory implementation of a Rust PEST parser and interpreter in conjunction with Risc0. The host creates the AST based on "source code". This is then evaluated with the interpreter in the private environment (guest).
-## Quick Start
+<!-- TODO: one-line thesis title / author / university -->
 
-First, make sure [rustup] is installed. The
-[`rust-toolchain.toml`][rust-toolchain] file will be used by `cargo` to
-automatically install the correct version.
+An implementation of a zero-knowledge **data utility attestation** protocol.
+Data consumers express utility requirements over a data batch as a query in
+a custom DSL (referred to in the code as **EPL**); the query is evaluated
+against the private batch inside a [RISC Zero](https://risczero.com) zkVM
+guest, producing a receipt that proves the evaluation result without
+revealing the raw data.
 
-To build all methods and execute the method within the zkVM, run the following
-command:
+## Protocol overview
+
+The demo (`host`) walks through six phases, matching the roles in the
+protocol:
+
+1. **Batch provisioning** — the Manufacturer signs a data batch (RSA).
+2. **Utility rule generation** — the Data Consumer trains a decision tree
+   over labelled data and derives a utility predicate from it.
+3. **Preprocessing** — the User (data holder) parses the predicate into an
+   EPL AST and indexes the raw batch.
+4. **Proof generation** — the User runs the AST + batch + signature through
+   the zkVM guest (`methods/guest`) and gets back a receipt.
+5. **Verification** — the Data Consumer verifies the receipt, checks the
+   committed predicate matches what was requested, and checks the
+   Manufacturer's signature is intact.
+6. **Purchase decision** — based on the verified result.
+
+> **Note:** `scripts/end-to-end-test.sh` runs this protocol on CPU with a
+> single small workload (`user-batch.json`) purely to **illustrate** the
+> six phases above. It is not the thesis's evaluation methodology. The
+> actual evaluation runs — larger workloads (10MB/100MB/1000MB), real ZK
+> proofs, GPU-accelerated — are done via
+> `scripts-cuda/end-to-end-test-cuda.sh` on a CUDA-capable machine; see
+> "Real evaluation runs" below.
+
+## Repository layout
+
+| Path                  | What it is                                            |
+|------------------------|--------------------------------------------------------|
+| `crates/dnf_core`      | EPL parser AST + interpreter (the DSL language itself) |
+| `crates/system_core`   | Manufacturer / Data Consumer protocol logic            |
+| `host`                 | Orchestrates the end-to-end demo (`host/src/main.rs`)  |
+| `methods` / `methods/guest` | The zkVM guest program (`eval_ast`) that evaluates the EPL AST privately |
+| `benchmarks`           | Test-data generation + benchmark result recording       |
+| `scripts`              | CPU demo/smoke-test scripts                             |
+| `scripts-cuda`         | Bare-metal GPU setup + the real evaluation/benchmark scripts |
+
+## Quick start (Docker — recommended)
 
 ```bash
-cargo run -p host
+docker build -t dua-e2e .
+docker run -it --rm dua-e2e
 ```
 
-### Executing the Project Locally in Development Mode
-
-During development, faster iteration upon code changes can be achieved by leveraging [dev-mode], we strongly suggest activating it during your early development phase. Furthermore, you might want to get insights into the execution statistics of your project, and this can be achieved by specifying the environment variable `RUST_LOG="[executor]=info"` before running your project.
-
-Put together, the command to run your project in development mode while getting execution statistics is:
+Inside the container:
 
 ```bash
-RUST_LOG="[executor]=info" RISC0_DEV_MODE=1 cargo run
+# unit tests
+cargo test -p dnf_core -p system_core -p host
+
+# fast smoke test (dev mode, small fixed dataset)
+bash scripts/test.sh
+
+# CPU demonstrator only — illustrates the protocol, not the real evaluation
+bash scripts/end-to-end-test.sh
 ```
 
-### Running Proofs Remotely on Bonsai
+See [`DOCKER.md`](DOCKER.md) for more detail.
 
-_Note: The Bonsai proving service is still in early Alpha; an API key is
-required for access. [Click here to request access][bonsai access]._
+## Quick start (without Docker)
 
-If you have access to the URL and API key to Bonsai you can run your proofs
-remotely. To prove in Bonsai mode, invoke `cargo run` with two additional
-environment variables:
+Requires [`rustup`](https://rustup.rs) (picks up the pinned toolchain from
+`rust-toolchain.toml` automatically) and the RISC Zero toolchain:
 
 ```bash
-BONSAI_API_KEY="YOUR_API_KEY" BONSAI_API_URL="BONSAI_URL" cargo run
+curl -L https://risczero.com/install | bash
+rzup install
+cargo run -p host --release -- user-batch.json
 ```
 
-## How to Create a Project Based on This Template
+Dev mode (fast, no real proof) is controlled by `RISC0_DEV_MODE=1|0`.
 
-Search this template for the string `TODO`, and make the necessary changes to
-implement the required feature described by the `TODO` comment. Some of these
-changes will be complex, and so we have a number of instructional resources to
-assist you in learning how to write your own code for the RISC Zero zkVM:
+## Real evaluation runs (not covered by the Docker image)
 
-- The [RISC Zero Developer Docs][dev-docs] is a great place to get started.
-- Example projects are available in the [examples folder][examples] of
-  [`risc0`][risc0-repo] repository.
-- Reference documentation is available at [https://docs.rs][docs.rs], including
-  [`risc0-zkvm`][risc0-zkvm], [`cargo-risczero`][cargo-risczero],
-  [`risc0-build`][risc0-build], and [others][crates].
+The thesis's actual end-to-end evaluation runs on larger workloads
+(10MB/100MB/1000MB datasets) with GPU acceleration, via
+`scripts-cuda/end-to-end-test-cuda.sh`, plus two dedicated large-workload
+runs: `scripts-cuda/extensive-bechmark-100MB.sh` and
+`scripts-cuda/extensive-bechmark-1000MB.sh`. This is the branch that owns
+these high-workload runs (as opposed to `dsl-performance-benchmarks`,
+which stays in the 1KB–1000KB range).
 
-## Directory Structure
+All of these require an NVIDIA GPU, the CUDA toolkit, and driver support
+on the host machine — see `scripts-cuda/set-up.sh` for bare-metal setup.
+They cannot run inside this container, since the NVIDIA driver must live
+on the host. Recorded results from these runs are committed under
+`benchmarks/benchmark_results/`.
 
-It is possible to organize the files for these components in various ways.
-However, in this starter template we use a standard directory structure for zkVM
-applications, which we think is a good starting point for your applications.
+## License
 
-```text
-project_name
-├── Cargo.toml
-├── host
-│   ├── Cargo.toml
-│   └── src
-│       └── main.rs                    <-- [Host code goes here]
-└── methods
-    ├── Cargo.toml
-    ├── build.rs
-    ├── guest
-    │   ├── Cargo.toml
-    │   └── src
-    │       └── method_name.rs         <-- [Guest code goes here]
-    └── src
-        └── lib.rs
-```
-
-## Video Tutorial
-
-For a walk-through of how to build with this template, check out this [excerpt
-from our workshop at ZK HACK III][zkhack-iii].
-
-## Questions, Feedback, and Collaborations
-
-We'd love to hear from you on [Discord][discord] or [Twitter][twitter].
-
-[bonsai access]: https://bonsai.xyz/apply
-[cargo-risczero]: https://docs.rs/cargo-risczero
-[crates]: https://github.com/risc0/risc0/blob/main/README.md#rust-binaries
-[dev-docs]: https://dev.risczero.com
-[dev-mode]: https://dev.risczero.com/api/generating-proofs/dev-mode
-[discord]: https://discord.gg/risczero
-[docs.rs]: https://docs.rs/releases/search?query=risc0
-[examples]: https://github.com/risc0/risc0/tree/main/examples
-[risc0-build]: https://docs.rs/risc0-build
-[risc0-repo]: https://www.github.com/risc0/risc0
-[risc0-zkvm]: https://docs.rs/risc0-zkvm
-[rust-toolchain]: rust-toolchain.toml
-[rustup]: https://rustup.rs
-[twitter]: https://twitter.com/risczero
-[zkhack-iii]: https://www.youtube.com/watch?v=Yg_BGqj_6lg&list=PLcPzhUaCxlCgig7ofeARMPwQ8vbuD6hC5&index=5
-[zkvm-overview]: https://dev.risczero.com/zkvm
+See [`LICENSE`](LICENSE).
