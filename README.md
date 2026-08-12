@@ -23,8 +23,8 @@ CUDA-supported proving configurations:
 
 | Query | Mechanism | Script |
 |---|---|---|
-| B1 | Filter (`ANY`) | *no matching script found in this branch* |
-| B2 | Filter (`ALL`) | `filter-benchmark.sh` |
+| B1 | Filter (`ANY`) | `filter-benchmark-any.sh` |
+| B2 | Filter (`ALL`) | `filter-benchmark-all.sh` |
 | B3 | Filter + Aggregation | `filter-aggregate-benchmark.sh` |
 | B4 | Filter + Window | `filter-window-benchmark.sh` |
 | B5 | Filter + Session | `filter-session-benchmark.sh` |
