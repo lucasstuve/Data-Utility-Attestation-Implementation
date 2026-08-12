@@ -1,102 +1,70 @@
-# RISC Zero Rust DNF Parser
+# Data Utility Attestation — DSL Performance Benchmarks
 
-An exploratory implementation of a Rust PEST parser and interpreter in conjunction with Risc0. The host creates the AST based on "source code". This is then evaluated with the interpreter in the private environment (guest).
-## Quick Start
+<!-- TODO: one-line thesis title / author / university -->
 
-First, make sure [rustup] is installed. The
-[`rust-toolchain.toml`][rust-toolchain] file will be used by `cargo` to
-automatically install the correct version.
+Performance benchmarks for EPL DSL query evaluation in the [Data Utility
+Attestation protocol](../end-to-end-system) — proving time, cycle counts,
+and verification time for the RISC Zero zkVM guest, across query shapes
+(filter, filter+aggregate, pattern, session, window, window+aggregate,
+frequency) and data sizes (1KB–1000KB, plus larger GPU-only runs).
 
-To build all methods and execute the method within the zkVM, run the following
-command:
+> **Note:** every benchmark script here performs a **real ZK proof**
+> (`RISC0_DEV_MODE=0` is hardcoded in each script) — there is no fast
+> dev-mode path on this branch. Expect proving time to scale with dataset
+> size. Large (100MB/1000MB) workloads are not part of this branch's
+> evaluation scope — see the `end-to-end-system` branch for those.
 
-```bash
-cargo run -p host
-```
+## Repository layout
 
-### Executing the Project Locally in Development Mode
+| Path                  | What it is                                            |
+|------------------------|--------------------------------------------------------|
+| `crates/dnf_core`      | EPL parser AST + interpreter (the DSL language itself) |
+| `crates/system_core`   | Manufacturer / Data Consumer protocol logic            |
+| `host`                 | Runs a single query against a dataset, records results |
+| `methods` / `methods/guest` | The zkVM guest program (`eval_ast`)               |
+| `benchmarks`           | Test-data generation + benchmark result recording       |
+| `scripts`              | CPU benchmark scripts (real proving, datasets up to 1000KB) |
+| `scripts-cuda`         | GPU-accelerated versions of the same benchmarks, plus GPU-only 100MB/1000MB runs |
 
-During development, faster iteration upon code changes can be achieved by leveraging [dev-mode], we strongly suggest activating it during your early development phase. Furthermore, you might want to get insights into the execution statistics of your project, and this can be achieved by specifying the environment variable `RUST_LOG="[executor]=info"` before running your project.
-
-Put together, the command to run your project in development mode while getting execution statistics is:
-
-```bash
-RUST_LOG="[executor]=info" RISC0_DEV_MODE=1 cargo run
-```
-
-### Running Proofs Remotely on Bonsai
-
-_Note: The Bonsai proving service is still in early Alpha; an API key is
-required for access. [Click here to request access][bonsai access]._
-
-If you have access to the URL and API key to Bonsai you can run your proofs
-remotely. To prove in Bonsai mode, invoke `cargo run` with two additional
-environment variables:
+## Quick start (Docker — recommended)
 
 ```bash
-BONSAI_API_KEY="YOUR_API_KEY" BONSAI_API_URL="BONSAI_URL" cargo run
+docker build -t dua-benchmarks .
+docker run -it --rm dua-benchmarks
 ```
 
-## How to Create a Project Based on This Template
+Inside the container — each of these performs real ZK proving on CPU:
 
-Search this template for the string `TODO`, and make the necessary changes to
-implement the required feature described by the `TODO` comment. Some of these
-changes will be complex, and so we have a number of instructional resources to
-assist you in learning how to write your own code for the RISC Zero zkVM:
-
-- The [RISC Zero Developer Docs][dev-docs] is a great place to get started.
-- Example projects are available in the [examples folder][examples] of
-  [`risc0`][risc0-repo] repository.
-- Reference documentation is available at [https://docs.rs][docs.rs], including
-  [`risc0-zkvm`][risc0-zkvm], [`cargo-risczero`][cargo-risczero],
-  [`risc0-build`][risc0-build], and [others][crates].
-
-## Directory Structure
-
-It is possible to organize the files for these components in various ways.
-However, in this starter template we use a standard directory structure for zkVM
-applications, which we think is a good starting point for your applications.
-
-```text
-project_name
-├── Cargo.toml
-├── host
-│   ├── Cargo.toml
-│   └── src
-│       └── main.rs                    <-- [Host code goes here]
-└── methods
-    ├── Cargo.toml
-    ├── build.rs
-    ├── guest
-    │   ├── Cargo.toml
-    │   └── src
-    │       └── method_name.rs         <-- [Guest code goes here]
-    └── src
-        └── lib.rs
+```bash
+bash scripts/filter-benchmark.sh
+bash scripts/filter-aggregate-benchmark.sh
+bash scripts/filter-aggregate-real-data.sh
+bash scripts/filter-pattern-benchmark.sh
+bash scripts/filter-session-benchmark.sh
+bash scripts/filter-window-benchmark.sh
+bash scripts/filter-window-aggregate-benchmark.sh
+bash scripts/frequency-benchmark-100KB.sh
 ```
 
-## Video Tutorial
+Results are written as CSV files (e.g. `filter-benchmark.csv`) in the
+project root.
 
-For a walk-through of how to build with this template, check out this [excerpt
-from our workshop at ZK HACK III][zkhack-iii].
+See [`DOCKER.md`](DOCKER.md) for more detail.
 
-## Questions, Feedback, and Collaborations
+## GPU-accelerated benchmarks (not covered by this Docker image)
 
-We'd love to hear from you on [Discord][discord] or [Twitter][twitter].
+`scripts-cuda/*.sh` mirror the CPU benchmarks above with `--features cuda`
+for direct CPU-vs-GPU comparison, on the same 1KB–1000KB datasets. This
+requires an NVIDIA GPU, the CUDA toolkit, and driver support on the host
+machine — see `scripts-cuda/set-up.sh` for bare-metal setup. It cannot run
+inside this container, since the NVIDIA driver must live on the host.
+Recorded results from five of these runs (filter, filter-pattern,
+filter-window, filter-window-aggregate, frequency) are committed under
+`benchmarks/benchmark_results/`.
 
-[bonsai access]: https://bonsai.xyz/apply
-[cargo-risczero]: https://docs.rs/cargo-risczero
-[crates]: https://github.com/risc0/risc0/blob/main/README.md#rust-binaries
-[dev-docs]: https://dev.risczero.com
-[dev-mode]: https://dev.risczero.com/api/generating-proofs/dev-mode
-[discord]: https://discord.gg/risczero
-[docs.rs]: https://docs.rs/releases/search?query=risc0
-[examples]: https://github.com/risc0/risc0/tree/main/examples
-[risc0-build]: https://docs.rs/risc0-build
-[risc0-repo]: https://www.github.com/risc0/risc0
-[risc0-zkvm]: https://docs.rs/risc0-zkvm
-[rust-toolchain]: rust-toolchain.toml
-[rustup]: https://rustup.rs
-[twitter]: https://twitter.com/risczero
-[zkhack-iii]: https://www.youtube.com/watch?v=Yg_BGqj_6lg&list=PLcPzhUaCxlCgig7ofeARMPwQ8vbuD6hC5&index=5
-[zkvm-overview]: https://dev.risczero.com/zkvm
+Large (100MB/1000MB) workloads are out of scope for this branch — see the
+`end-to-end-system` branch's README for those.
+
+## License
+
+See [`LICENSE`](LICENSE).
