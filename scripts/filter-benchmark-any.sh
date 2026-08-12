@@ -4,9 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-DATA_SETS=("test-data-1KB.json" "test-data-10KB.json" "test-data-100KB.json" "test-data-1000KB.json")
-QUERY='CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value < 50.0 ); assert PATTERN (VehicleData(value < 10.0) -> VehicleData(value > 20.0 )); '
-RESULTS_FILE="filter-pattern-benchmark-cpu.csv"
+DATA_SETS=("test-data-1KB.json")  #"test-data-10KB.json" "test-data-100KB.json" "test-data-1000KB.json")
+QUERY='CREATE SCHEMA VehicleData (dataFieldName string, value float); assert ANY VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value < 50.0 );'
+RESULTS_FILE="filter-benchmark-any-cpu.csv"
 
 cd "$PROJECT_ROOT"
 export RISC0_DEV_MODE=0
