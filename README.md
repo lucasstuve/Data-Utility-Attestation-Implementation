@@ -3,10 +3,49 @@
 <!-- TODO: one-line thesis title / author / university -->
 
 Performance benchmarks for EPL DSL query evaluation in the [Data Utility
-Attestation protocol](../end-to-end-system) — proving time, cycle counts,
-and verification time for the RISC Zero zkVM guest, across query shapes
-(filter, filter+aggregate, pattern, session, window, window+aggregate,
-frequency) and data sizes (1KB–1000KB, plus larger GPU-only runs).
+Attestation protocol](../end-to-end-system), corresponding to Chapter 8.5
+("Performance Benchmarks") of the thesis.
+
+## Evaluation design
+
+The performance benchmarks aim to assess whether it is technically
+feasible to prove and verify data utility within the proposed system, and
+to pinpoint any associated bottlenecks. Two types of benchmarks are
+conducted: first, comparing proof generation for different textual queries
+under varying workloads; and second, using a fixed workload while varying
+the proportion of events selected by the interpreter for subsequent
+evaluation.
+
+**Query-varying benchmarks** compare queries B1–B6, representing varying
+levels of evaluation complexity, each evaluated on all four
+byte-size-varying data files, with both the CPU-supported and
+CUDA-supported proving configurations:
+
+| Query | Mechanism | Script |
+|---|---|---|
+| B1 | Filter (`ANY`) | *no matching script found in this branch* |
+| B2 | Filter (`ALL`) | `filter-benchmark.sh` |
+| B3 | Filter + Aggregation | `filter-aggregate-benchmark.sh` |
+| B4 | Filter + Window | `filter-window-benchmark.sh` |
+| B5 | Filter + Session | `filter-session-benchmark.sh` |
+| B6 | Filter + Pattern | `filter-pattern-benchmark.sh` |
+
+Two additional scripts don't correspond to a B-numbered query above:
+`filter-aggregate-real-data.sh` (same shape as B3, run against the
+real-world VW dataset instead of the synthetic byte-size files) and
+`filter-window-aggregate-benchmark.sh` (filter + window + aggregation, a
+combination not covered by B1–B6).
+
+This setup examines how proving cost is affected by input size, the
+evaluated textual utility query, and their combination.
+
+**Event frequency benchmarks** (`frequency-benchmark-100KB.sh`) examine
+how the system behaves when the query logic remains constant but the
+proportion of events relevant to predicate evaluation varies — separating
+computational effort from pure input volume versus the internal logical
+workload of the DSL interpreter in the guest environment. The fixed query
+covers event schema construction plus filtering with a two-predicate
+conjunction.
 
 > **Note:** every benchmark script here performs a **real ZK proof**
 > (`RISC0_DEV_MODE=0` is hardcoded in each script) — there is no fast
