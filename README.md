@@ -56,9 +56,6 @@ docker run -it --rm dua-e2e
 Inside the container:
 
 ```bash
-# unit tests
-cargo test -p dnf_core -p system_core -p host
-
 # just the DSL language-expressiveness suite (host/src/unit_tests_expressiveness.rs,
 # module `lang_expressiveness_tests`) — parses and evaluates queries across
 # quantifiers, value types, DNF combinations, every aggregate function, and
