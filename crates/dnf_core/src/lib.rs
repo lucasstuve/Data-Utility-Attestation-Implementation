@@ -7,3 +7,6 @@ pub mod interpreter;
 
 #[cfg(test)]
 mod unit_tests_interpreter;
+
+#[cfg(test)]
+extern crate std;
