@@ -4,52 +4,7 @@ use crate::interpreter::Event;
 extern crate alloc;
 use alloc::string::String;
 use alloc::vec::Vec;
-//use serde_json::Value;
 
-/*
-pub fn extract_events(schema: Schema, raw_event: &[u8]) -> Event {
-    let json: Value = serde_json::from_slice(raw_event).unwrap();
-    let mut event_data: Vec<Term> = Vec::new();
-
-    for attr in schema.attribute_list.list {
-        let term = match attr.i_type {
-            Itype::Bool => {
-                let v = json.get(&attr.ident).unwrap();
-                let b = v
-                    .as_bool()
-                    .or_else(|| v.as_str().and_then(|s| s.parse::<bool>().ok()))
-                    .unwrap();
-                Term::Bool(b)
-            }
-            Itype::Float => {
-                let v = json.get(&attr.ident).unwrap();
-                let f = v
-                    .as_f64()
-                    .or_else(|| v.as_str().and_then(|s| s.parse::<f64>().ok()))
-                    .unwrap_or_else(|| panic!("float parsing failed!"));
-
-                Term::Float(f)
-            }
-            Itype::String => {
-                let v = json.get(&attr.ident).unwrap();
-                Term::Str(v.as_str().unwrap().into())
-            }
-            Itype::Int => {
-                let v = json.get(&attr.ident).unwrap();
-                let n = v
-                    .as_i64()
-                    .or_else(|| v.as_str().and_then(|s| s.parse::<i64>().ok()))
-                    .unwrap();
-                Term::Int(n)
-            }
-        };
-
-        event_data.push(term);
-    }
-
-    return Event { data: event_data };
-}
-    */
 
 pub fn grap_event_string<'a>(indexes: (u32, u32), bytes: &'a [u8]) -> &'a str {
     let (s, e) = indexes;

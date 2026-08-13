@@ -1,23 +1,3 @@
-/*#![no_main]
-extern crate alloc;
-
-use risc0_zkvm::guest::env;
-//use rsa::{pkcs1::DecodeRsaPublicKey, pkcs8::DecodePublicKey, RsaPublicKey};
-//use rsa::pkcs1v15::VerifyingKey;
-//use rsa::pkcs1v15::Signature as RsaSignature;
-//use rsa::pkcs1::DecodeRsaPublicKey;
-//use rsa::RsaPublicKey;
-
-risc0_zkvm::guest::entry!(main);
-
-fn main() {
-    let ok = true;
-    env::commit(&ok);
-}
-
-*/
-
-//#![no_std]
 #![no_main]
 extern crate alloc;
 

@@ -1,7 +1,5 @@
 #![allow(clippy::upper_case_acronyms, clippy::result_large_error)]
 
-//use std::sync::mpsc::RecvTimeoutError;
-
 use std::collections::linked_list;
 
 use dnf_core::ast::{Conjunction, Disjunction, Operator, Pred, Term};
@@ -12,7 +10,6 @@ use dnf_core::epl::{
 use pest::Parser;
 use pest_derive::Parser;
 use rustyline::completion::Pair;
-//use risc0_zkvm_platform::syscall::bigint::WIDTH_WORDS;
 
 #[derive(Parser)]
 //#[grammar = "grammar.pest"]
@@ -24,9 +21,6 @@ pub struct DnfParser;
 
 pub fn parse_source(source: &str) -> Result<ProgramAst, pest::error::Error<Rule>> {
     let mut pairs = DnfParser::parse(Rule::program, source)?;
-    //let ast = build_dnf(pairs);
-    // Ok(ast)
-
     let program_pair = pairs.next().unwrap();
     Ok(build_program(program_pair))
 }

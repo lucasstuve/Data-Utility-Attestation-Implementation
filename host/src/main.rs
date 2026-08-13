@@ -5,23 +5,17 @@ use dnf_core::epl::ProgramAst;
 use dnf_core::input_extractor::{efficient_event_extraction, grap_event_string};
 use dnf_core::interpreter::Event;
 use methods::{EVAL_AST_ELF, EVAL_AST_ID};
-
 mod parser;
 mod predata_processor;
-
 use predata_processor::create_events_indexes;
 use rand::rngs::OsRng;
-
 use risc0_zkvm::{default_prover, ExecutorEnv};
 use std::env;
 use std::fs::{self, File};
 use std::io::Read;
-
 use colored::Colorize;
-
 use std::path::Path;
 use std::time::Instant;
-
 use benchmarks::performance_benchmarks::{write_results_csv, Row};
 use rsa::signature::{RandomizedSigner, SignatureEncoding};
 use rsa::{
@@ -90,12 +84,7 @@ fn main() {
     let signature = singing_key.sign_with_rng(&mut rng, file_bytes).to_vec();
     let sig_length: u32 = signature.len().try_into().unwrap();
 
-    /* Example user defined query string, first defining the data extraction than ASSERT a rule.
-    // Note: the IDENTIFIER (e.g. dataFieldName) must exactly match the identifier used in the original JSON
-    let source = r#"CREATE SCHEMA VehicleData (dataFieldName string, value int);
-                          assert ALL VehicleData (dataFieldName == "profiles.targetSOCPercentage" AND value < 50);
-                          assert SESSION(VehicleData:start(value == 10) ->  VehicleData(value == 30) ->  VehicleData:end(value == 3) ); "#;
-    // Make also sure the value comparing against has same data type as defined in the SCHEMA.*/
+
 
     let dnf = parser::parse_source(&query_arg);
 
@@ -166,7 +155,6 @@ fn main() {
     println!("The query result is: {}", _output);
 
     // Debug Output
-
     let _debug_output: u32 = receipt.journal.decode().unwrap();
     println!(
         "{}{}",
