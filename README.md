@@ -59,6 +59,12 @@ Inside the container:
 # unit tests
 cargo test -p dnf_core -p system_core -p host
 
+# just the DSL language-expressiveness suite (host/src/unit_tests_expressiveness.rs,
+# module `lang_expressiveness_tests`) — parses and evaluates queries across
+# quantifiers, value types, DNF combinations, every aggregate function, and
+# time-windows
+cargo test -p host --lib lang_expressiveness_tests
+
 # fast smoke test (dev mode, small fixed dataset)
 bash scripts/test.sh
 
