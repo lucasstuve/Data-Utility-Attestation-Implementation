@@ -9,3 +9,4 @@ n_events,dsl_case,input_bytes,total_cycles,user_cycles,segments,time_env_s,time_
 0,user-batch.json,964,262144,144122,1,0,0,107,22
 0,user-batch.json,964,262144,144122,1,0,0,116,21
 0,user-batch.json,964,262144,144122,1,0,0,94,20
+0,user-batch.json,964,262144,144122,1,0,0,110,26
