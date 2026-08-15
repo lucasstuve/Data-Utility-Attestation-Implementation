@@ -144,6 +144,8 @@ pub mod lang_expressiveness_tests {
         // Evaluation Result:
         let eval_result = eval_program(&evaluation_program.unwrap(), &events);
 
+        //Explaination of expected result: The tenth event fulfills the value == 10 and is_on == true.
+
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
     }
@@ -159,6 +161,8 @@ pub mod lang_expressiveness_tests {
         // Evaluation Result:
         let eval_result = eval_program(&evaluation_program.unwrap(), &events);
 
+        //Explaination of expected result: Event with value = 2 and is_on = true satisfies right side of the disjunction. 
+
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
     }
@@ -173,6 +177,8 @@ pub mod lang_expressiveness_tests {
         let events = events_1();
         // Evaluation Result:
         let eval_result = eval_program(&evaluation_program.unwrap(), &events);
+
+         //Explaination of expected result: this must be true, because all events are either energy = low, medium or high.
 
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
@@ -190,6 +196,8 @@ pub mod lang_expressiveness_tests {
         // Evaluation Result:
         let eval_result = eval_program(&evaluation_program.unwrap(), &events);
 
+         //Explaination of expected result: one event with energy = medium is present in the set. 
+
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
     }
@@ -204,6 +212,8 @@ pub mod lang_expressiveness_tests {
         let events = events_1();
         // Evaluation Result:
         let eval_result = eval_program(&evaluation_program.unwrap(), &events);
+
+          //Explaination of expected result: some events have energy = low, or high. 
 
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
@@ -221,6 +231,8 @@ pub mod lang_expressiveness_tests {
         // Evaluation Result:
         let eval_result = eval_program(&evaluation_program.unwrap(), &events);
 
+            //Explaination of expected result: two events have the value 6. 
+
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
@@ -236,6 +248,8 @@ pub mod lang_expressiveness_tests {
         let events = events_1();
         // Evaluation Result:
         let eval_result = eval_program(&evaluation_program.unwrap(), &events);
+
+        //Explaination of expected result: no event has value the value 99. 
 
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
@@ -255,6 +269,8 @@ pub mod lang_expressiveness_tests {
         // Evaluation Result:
         let eval_result = eval_program(&evaluation_program.unwrap(), &events);
 
+        //Explaination of expected result: there is no event with amount 93.10 
+
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
     }
@@ -270,6 +286,8 @@ pub mod lang_expressiveness_tests {
         let events = events_1();
         // Evaluation Result:
         let eval_result = eval_program(&evaluation_program.unwrap(), &events);
+
+        //Explaination of expected result: there is one event with amount 93.10 
 
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
@@ -293,6 +311,9 @@ pub mod lang_expressiveness_tests {
         assert_eq!(eval_result, true);
 
 
+        //Explaination of expected result: there are several events where is_on = true. 
+
+
     }
     #[test]
     pub fn qc03_bool_false(){
@@ -308,6 +329,9 @@ pub mod lang_expressiveness_tests {
 
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
+
+
+        //Explaination of expected result: there are no other optionen beyond true, or false. 
 
         
     }
@@ -328,6 +352,8 @@ pub mod lang_expressiveness_tests {
 
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
+
+        //Explaination of expected result: any event machtes that thas either energy = medium or high.  
     }
     #[test]
     pub fn qc04_string_or_all_false() {
@@ -343,6 +369,8 @@ pub mod lang_expressiveness_tests {
 
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
+
+        //Explaination of expected result: some events have energy = high.  
     }
 
     #[test]
@@ -359,7 +387,9 @@ pub mod lang_expressiveness_tests {
 
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
-    }
+
+        //Explaination of expected result: there is only one event with value = 10, but it has is_on = true.
+         }
 
     #[test]
     pub fn qc02_all_range_true() {
@@ -375,6 +405,9 @@ pub mod lang_expressiveness_tests {
 
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
+
+        
+        //Explaination of expected result: all events have values between 1-10 . 
     }
     #[test]
     pub fn qc02_all_range_false() {
@@ -391,8 +424,9 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
-    }
+        //Explaination of expected result: event with value = 10 present. 
+
+         }
 
     #[test]
     pub fn qc01_any_range_true() {
@@ -409,7 +443,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: for example the event with the value = 6, is higher 2 and lower than 8. 
     }
 
     #[test]
@@ -427,7 +461,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: there is no event with the value = 7. 
     }
     #[test]
     pub fn qc05_count_eq_true() {
@@ -444,7 +478,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: there are exact 10 events with the value >= 1. 
     }
 
     #[test]
@@ -462,7 +496,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: because count is exact 10, the last statement is false. 
     }
     #[test]
     pub fn qc05_count_after_any_false() {
@@ -479,7 +513,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: no Event with value 7
     }
 
     #[test]
@@ -497,7 +531,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: there are exact 10 events with values >= 1.
     }
 
     #[test]
@@ -515,7 +549,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: 8+6+8+2+1+5+6+9+5+10 = 60. 
     }
 
     #[test]
@@ -533,7 +567,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: the event with value = 10 has highest value in the set. 
     }
 
     #[test]
@@ -551,7 +585,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: the smallest value of an event is indeed 1. 
     }
 
     #[test]
@@ -569,7 +603,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: sorted => 1, 2, 5, 5, 6, 6, 8, 8, 9, 10  => median = 6 
     }
     #[test]
     pub fn qc05_avg_eq_true() {
@@ -586,7 +620,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: sum(value) = 60;  60 / 10 events => avg = 6 
     }
     #[test]
     pub fn qc05_stddev_eq_true() {
@@ -603,7 +637,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: 2.9059326290271157 with calculator. 
     }
 
     #[test]
@@ -621,7 +655,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result:  3 events are in the 60s window. 
     }
 
     #[test]
@@ -639,7 +673,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: 3 events are in the 60s window, so it is false. 
     }
 
     #[test]
@@ -657,7 +691,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: the count window contains 2 events, so it is true. 
     }
     #[test]
     pub fn qc07_count_window_count_false() {
@@ -674,7 +708,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: the count window contains only two windows. 
     }
 
     #[test]
@@ -693,7 +727,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: the event sequence contains 6 -> 8 -> 1, so session pattern is found. 
     }
     #[test]
     pub fn qc08_session_false() {
@@ -711,7 +745,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: the sequence 1 -> 2 -> 3 -> 4 does not occur. 
     }
     #[test]
     pub fn qc09_pattern_true() {
@@ -728,7 +762,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: two events with value = 8 occur in the required order. 
     }
 
     #[test]
@@ -746,6 +780,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
 
-        //Explaination of expected result: no Event with value 7, ( 6 < 7 < 8 )
+        //Explaination of expected result: the filtered sequence does (is_on = true), does not contain the sequence 8 -> 6. 
     }
 }
+    
