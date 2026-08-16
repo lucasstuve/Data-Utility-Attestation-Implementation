@@ -161,7 +161,7 @@ pub mod lang_expressiveness_tests {
         // Evaluation Result:
         let eval_result = eval_program(&evaluation_program.unwrap(), &events);
 
-        //Explaination of expected result: Event with value = 2 and is_on = true satisfies right side of the disjunction. 
+        //Explaination of expected result: Event with value = 2 and is_on = false satisfies right side of the disjunction. 
 
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
@@ -287,7 +287,7 @@ pub mod lang_expressiveness_tests {
         // Evaluation Result:
         let eval_result = eval_program(&evaluation_program.unwrap(), &events);
 
-        //Explaination of expected result: there is one event with amount 93.10 
+        //Explaination of expected result: there is one event with amount 93.00.
 
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
@@ -353,7 +353,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, true);
 
-        //Explaination of expected result: any event machtes that thas either energy = medium or high.  
+        //Explaination of expected result: there are events with energy = medium or low. 
     }
     #[test]
     pub fn qc04_string_or_all_false() {
@@ -513,7 +513,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
 
-        //Explaination of expected result: no Event with value 7
+        //Explaination of expected result: values greater than 7: 8,8,9,10 => only 4. 
     }
 
     #[test]
@@ -708,7 +708,7 @@ pub mod lang_expressiveness_tests {
         // Comparision of expected with actual evaluation result.
         assert_eq!(eval_result, false);
 
-        //Explaination of expected result: the count window contains only two windows. 
+        //Explaination of expected result: the count window contains only two events. 
     }
 
     #[test]
