@@ -21,14 +21,14 @@ levels of evaluation complexity, each evaluated on all four
 byte-size-varying data files, with both the CPU-supported and
 CUDA-supported proving configurations:
 
-| Query | Mechanism | Script |
-|---|---|---|
-| B1 | Filter (`ANY`) | `filter-benchmark-any.sh` |
-| B2 | Filter (`ALL`) | `filter-benchmark-all.sh` |
-| B3 | Filter + Aggregation | `filter-aggregate-benchmark.sh` |
-| B4 | Filter + Window | `filter-window-benchmark.sh` |
-| B5 | Filter + Session | `filter-session-benchmark.sh` |
-| B6 | Filter + Pattern | `filter-pattern-benchmark.sh` |
+| Query | Mechanism            | Script                          |
+| ----- | -------------------- | ------------------------------- |
+| B1    | Filter (`ANY`)       | `filter-benchmark-any.sh`       |
+| B2    | Filter (`ALL`)       | `filter-benchmark-all.sh`       |
+| B3    | Filter + Aggregation | `filter-aggregate-benchmark.sh` |
+| B4    | Filter + Window      | `filter-window-benchmark.sh`    |
+| B5    | Filter + Session     | `filter-session-benchmark.sh`   |
+| B6    | Filter + Pattern     | `filter-pattern-benchmark.sh`   |
 
 Two additional scripts don't correspond to a B-numbered query above:
 `filter-aggregate-real-data.sh` (same shape as B3, run against the
@@ -55,22 +55,40 @@ conjunction.
 
 ## Repository layout
 
-| Path                  | What it is                                            |
-|------------------------|--------------------------------------------------------|
-| `crates/dnf_core`      | EPL parser AST + interpreter (the DSL language itself) |
-| `crates/system_core`   | Manufacturer / Data Consumer protocol logic            |
-| `host`                 | Runs a single query against a dataset, records results |
-| `methods` / `methods/guest` | The zkVM guest program (`eval_ast`)               |
-| `benchmarks`           | Test-data generation + benchmark result recording       |
-| `scripts`              | CPU benchmark scripts (real proving, datasets up to 1000KB) |
-| `scripts-cuda`         | GPU-accelerated versions of the same benchmarks, plus GPU-only 100MB/1000MB runs |
+| Path                        | What it is                                                                       |
+| --------------------------- | -------------------------------------------------------------------------------- |
+| `crates/dnf_core`           | EPL parser AST + interpreter (the DSL language itself)                           |
+| `crates/system_core`        | Manufacturer / Data Consumer protocol logic                                      |
+| `host`                      | Runs a single query against a dataset, records results                           |
+| `methods` / `methods/guest` | The zkVM guest program (`eval_ast`)                                              |
+| `benchmarks`                | Test-data generation + benchmark result recording                                |
+| `scripts`                   | CPU benchmark scripts (real proving, datasets up to 1000KB)                      |
+| `scripts-cuda`              | GPU-accelerated versions of the same benchmarks, plus GPU-only 100MB/1000MB runs |
 
 ## Quick start (Docker — recommended)
 
+Make sure to clone and check out the `dsl-performance-benchmarks` branch
+**before building the Docker image**:
+
 ```bash
+git clone https://github.com/lucasstuve/Data-Utility-Attestation-Implementation.git
+cd Data-Utility-Attestation-Implementation
+git checkout dsl-performance-benchmarks
+
 docker build -t dua-benchmarks .
+
 docker run -it --rm dua-benchmarks
 ```
+
+Inside the container, it is recommended to first run:
+
+```bash
+bash scripts/test.sh
+```
+
+`test.sh` uses the 1KB test file and can be used as a small initial test
+to verify that the proving setup works before running the larger
+benchmarks.
 
 Inside the container — each of these performs real ZK proving on CPU:
 
@@ -88,6 +106,11 @@ bash scripts/frequency-benchmark-100KB.sh
 Results are written as CSV files (e.g. `filter-benchmark.csv`) in the
 project root.
 
+> **Apple Silicon:** Docker execution was tested on a MacBook Air with an
+> M3 chip and 8GB RAM. Smaller tests worked successfully, but larger proving
+> workloads may exceed the memory available to Docker. For larger benchmarks,
+> a machine with more RAM is recommended.
+
 See [`DOCKER.md`](DOCKER.md) for more detail.
 
 ## GPU-accelerated benchmarks (not covered by this Docker image)
@@ -97,6 +120,7 @@ for direct CPU-vs-GPU comparison, on the same 1KB–1000KB datasets. This
 requires an NVIDIA GPU, the CUDA toolkit, and driver support on the host
 machine — see `scripts-cuda/set-up.sh` for bare-metal setup. It cannot run
 inside this container, since the NVIDIA driver must live on the host.
+
 Recorded results from five of these runs (filter, filter-pattern,
 filter-window, filter-window-aggregate, frequency) are committed under
 `benchmarks/benchmark_results/`.
