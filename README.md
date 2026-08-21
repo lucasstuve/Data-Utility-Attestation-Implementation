@@ -3,6 +3,7 @@
 <!-- TODO: one-line thesis title / author / university -->
 
 An implementation of a zero-knowledge **data utility attestation** protocol.
+
 Data consumers express utility requirements over a data batch as a query in
 a custom DSL (referred to in the code as **EPL**); the query is evaluated
 against the private batch inside a [RISC Zero](https://risczero.com) zkVM
@@ -36,20 +37,32 @@ protocol:
 
 ## Repository layout
 
-| Path                  | What it is                                            |
-|------------------------|--------------------------------------------------------|
-| `crates/dnf_core`      | EPL parser AST + interpreter (the DSL language itself) |
-| `crates/system_core`   | Manufacturer / Data Consumer protocol logic            |
-| `host`                 | Orchestrates the end-to-end demo (`host/src/main.rs`)  |
+| Path                        | What it is                                                               |
+| --------------------------- | ------------------------------------------------------------------------ |
+| `crates/dnf_core`           | EPL parser AST + interpreter (the DSL language itself)                   |
+| `crates/system_core`        | Manufacturer / Data Consumer protocol logic                              |
+| `host`                      | Orchestrates the end-to-end demo (`host/src/main.rs`)                    |
 | `methods` / `methods/guest` | The zkVM guest program (`eval_ast`) that evaluates the EPL AST privately |
-| `benchmarks`           | Test-data generation + benchmark result recording       |
-| `scripts`              | CPU demo/smoke-test scripts                             |
-| `scripts-cuda`         | Bare-metal GPU setup + the real evaluation/benchmark scripts |
+| `benchmarks`                | Test-data generation + benchmark result recording                        |
+| `scripts`                   | CPU demo/smoke-test scripts                                              |
+| `scripts-cuda`              | Bare-metal GPU setup + the real evaluation/benchmark scripts             |
 
 ## Quick start (Docker — recommended)
 
+On Linux / x86-64:
+
 ```bash
 docker build -t dua-e2e .
+
+docker run -it --rm dua-e2e
+```
+
+On Apple Silicon (`M1`, `M2`, `M3`, etc.), build the image explicitly for
+`linux/amd64`:
+
+```bash
+docker build --platform=linux/amd64 -t dua-e2e .
+
 docker run -it --rm dua-e2e
 ```
 
@@ -69,6 +82,12 @@ bash scripts/test.sh
 bash scripts/end-to-end-test.sh
 ```
 
+> **Apple Silicon note:** Docker execution was tested on a MacBook Air with
+> an Apple M3 chip and 8 GB RAM. The smaller smoke-test and demonstrator
+> workloads worked, but larger real-proof workloads may exceed the memory
+> available to Docker on an 8 GB system. For larger proof-generation runs,
+> a machine with more RAM is recommended.
+
 See [`DOCKER.md`](DOCKER.md) for more detail.
 
 ## Quick start (without Docker)
@@ -78,7 +97,9 @@ Requires [`rustup`](https://rustup.rs) (picks up the pinned toolchain from
 
 ```bash
 curl -L https://risczero.com/install | bash
+
 rzup install
+
 cargo run -p host --release -- user-batch.json
 ```
 
