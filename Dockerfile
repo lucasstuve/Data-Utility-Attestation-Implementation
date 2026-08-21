@@ -34,5 +34,5 @@ RUN find . -name "*.sh" -type f -exec sed -i 's/\r$//' {} \;
 # methods/build.rs, cross-compiles the guest) so the image is ready to run.
 RUN cargo build --release -p host -p benchmarks
 
-ENV RISC0_DEV_MODE=1
+ENV RISC0_DEV_MODE=0
 CMD ["bash"]
