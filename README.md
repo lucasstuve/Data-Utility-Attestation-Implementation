@@ -9,6 +9,10 @@ This repository's evaluation work lives on two branches, not `main`:
 - **[`dsl-performance-benchmarks`](../../tree/dsl-performance-benchmarks)** —
   performance benchmarks for the EPL DSL query evaluation.
 
+ See
+  [DSL implementation](#dsl-implementation) below for the language's
+  parser/AST/interpreter breakdown.
+
 Check out the branch you want; each has its own `README.md` with full
 build/run instructions (Docker included).
 
