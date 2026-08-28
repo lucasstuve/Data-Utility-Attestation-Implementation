@@ -134,7 +134,7 @@ pub fn verify_attestation(receipt: &Receipt, image_id: [u32; 8]) -> (bool, [u8; 
 
 pub fn recalculate_predicate_hash(query_string: &str) -> [u8; 32] {
     let dnf = parser::parse_source(&query_string);
-    println!("PEST: {:?}", dnf);
+   //  println!("PEST: {:?}", dnf);
 
     let ast: ProgramAst = match dnf {
         Err(e) => {

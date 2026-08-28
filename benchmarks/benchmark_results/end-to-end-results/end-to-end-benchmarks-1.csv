@@ -1,0 +1,4 @@
+n_events,dsl_case,input_bytes,total_cycles,user_cycles,segments,time_env_s,time_exec_s,time_prov_s,time_veri_ms
+0,test-data-10-MB.json,10485704,446693376,376881391,852,0,0,796,11702
+0,test-data-100-MB.json,104857571,178520064,3770843209,8533,0,0,7347,84859
+0,vw-batch.json,966,262144,144023,1,0,0,4,9

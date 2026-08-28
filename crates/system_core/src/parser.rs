@@ -28,7 +28,6 @@ pub fn parse_source(source: &str) -> Result<ProgramAst, pest::error::Error<Rule>
     // Ok(ast)
 
     let program_pair = pairs.next().unwrap();
-    println!("{:?}", program_pair);
     Ok(build_program(program_pair))
 }
 
