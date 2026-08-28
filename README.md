@@ -10,9 +10,6 @@ This repository's evaluation work lives on two branches, not `main`:
   performance benchmarks for the EPL DSL query evaluation.
 
 
-Quick link for Data Utility Predicate Language Implementation: 
-- **[DSL implementation](#dsl-implementation)** — parser, AST and
-  interpreter breakdown for the language, further down this page.
 
 Check out the branch you want; each has its own `README.md` with full
 build/run instructions (Docker included).
