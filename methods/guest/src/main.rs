@@ -1,3 +1,10 @@
+//! The RISC Zero zkVM guest program (`eval_ast`): the private computation
+//! whose execution the host proves. It re-derives events from the raw
+//! batch, evaluates the DSL predicate over them, verifies the
+//! Manufacturer's signature, and commits the result plus a commitment to
+//! the evaluated logic to the journal — without revealing the raw batch or
+//! the DSL source itself.
+
 #![no_main]
 extern crate alloc;
 
@@ -27,6 +34,9 @@ use sha2::{Digest, Sha256};
 risc0_zkvm::guest::entry!(main);
 
 
+/// The guest's public output, committed via `env::commit`. Its layout must
+/// stay in sync with `system_core::data_consumer::Journal`, which decodes
+/// it from the receipt on the verifier side.
 #[derive(Serialize, Deserialize)]
 pub struct Journal {
     pub evaluation_result: bool,

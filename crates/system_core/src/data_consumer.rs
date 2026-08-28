@@ -1,3 +1,7 @@
+//! Data Consumer role: derives a DSL utility predicate from a trained
+//! decision tree, and verifies the zkVM receipt (attestation) the User
+//! later returns.
+
 use std::fmt::format;
 use std::panic::panic_any;
 
@@ -21,6 +25,9 @@ use methods::{EVAL_AST_ELF};
 
 pub type ALDataset = DatasetBase<Array2<f64>, Array1<usize>>;
 
+/// Mirrors the guest's `Journal` (`methods/guest/src/main.rs`) field-for-field
+/// so `receipt.journal.decode()` below deserializes correctly; the two are
+/// not shared via a common crate, so keep them in sync by hand.
 #[derive(Serialize, Deserialize)]
 pub struct Journal {
     pub evaluation_result: bool,
@@ -70,6 +77,9 @@ pub fn train_linfa_decision_tree(dataset: ALDataset) -> DecisionTree<f64, usize>
     return tree;
 }
 
+/// Reads the decision tree's root split (a single threshold on one
+/// feature) and turns it into the DSL comparison operator/value pair that
+/// reproduces the tree's positive-label branch.
 pub fn obtain_predicate_from_decision_tree(
     tree: DecisionTree<f64, usize>,
     feature_name: &str,
@@ -118,6 +128,8 @@ pub fn generate_query_from_textual_predicate(textual_predicate: &str) -> String 
     return query.to_string();
 }
 
+/// Verifies the receipt against the expected guest `image_id`, then
+/// decodes and returns its journal fields (see [`Journal`]).
 pub fn verify_attestation(receipt: &Receipt, image_id: [u32; 8]) -> (bool, [u8; 32], Vec<u8>) {
     receipt
         .verify(image_id)

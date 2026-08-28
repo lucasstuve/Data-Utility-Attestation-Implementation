@@ -1,3 +1,7 @@
+//! Manufacturer role: generates/loads raw data batches and RSA-signs them,
+//! so the User can later prove evaluation over a batch the Manufacturer
+//! actually issued.
+
 use benchmarks::data_generator::{
     generate_data_by_frequency, generate_test_data, generate_test_data_large,
 };
@@ -31,6 +35,9 @@ pub const VW_BATCH_JSON: &str = include_str!("../test_data/vw-batch.json");
  pub const BATCH_JSON_100MB: &str = include_str!("../test_data/test-data-100-MB.json");
  pub const BATCH_JSON_1000MB: &str = include_str!("../test_data/test-data-1000-MB.json");
 
+/// Generates a fresh RSA keypair, signs `file`'s bytes, and returns
+/// `(file_bytes, public_key_der, signature)` — the inputs the guest later
+/// re-verifies the batch's authenticity against.
 pub fn sign_batch(file: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("test_data");
     let path = base.join(file);

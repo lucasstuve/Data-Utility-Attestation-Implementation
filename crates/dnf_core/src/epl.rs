@@ -1,3 +1,8 @@
+//! Program-level AST: the [`ProgramAst`] produced by [`crate`]-external
+//! parsing (`system_core::parser::parse_source`) and evaluated by
+//! [`crate::interpreter::eval_program`], plus its schema/rule/window/session
+//! building blocks.
+
 extern crate alloc;
 
 use alloc::format;
@@ -12,6 +17,8 @@ use alloc::{string::String, vec::Vec};
 
 use serde::{Deserialize, Serialize};
 
+/// The parsed representation of one EPL program: the canonical utility
+/// predicate that `eval_program` evaluates against an event batch.
 //#[derive(Debug)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProgramAst {
@@ -24,18 +31,25 @@ pub struct ProgramAst {
 }
 
 impl ProgramAst {
+    /// Debug-formats the AST to bytes; hashed to commit to the evaluated
+    /// logic without revealing the underlying DSL source (see the zkVM
+    /// guest's `logic_commitment`).
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = alloc::format!("{:?}", self).into_bytes();
         return bytes;
     }
 }
 
+/// A named sequence of event conditions that must occur in order (with a
+/// wraparound back to the first condition allowed between matches).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Session {
     pub identifier: String,
     pub session_sequence: Vec<Disjunction>,
 }
 
+/// A named sequence of event conditions that must occur in strict,
+/// consecutive order within the event batch.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PatternRule {
     pub pattern_sequence: Vec<Disjunction>,
@@ -75,11 +89,16 @@ pub struct AttributeList {
     pub list: Vec<Attribute>,
 }
 
+/// Declares the shape of one event: a name plus its typed attribute list,
+/// used to map raw event bytes onto [`crate::interpreter::Event`] fields.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Schema {
     pub ident: String, // should be used as Ident
     pub attribute_list: AttributeList,
 }
+
+/// A DNF condition (`rule`) that events are filtered/selected by, combined
+/// with a [`Quantifier`] deciding whether `ANY` or `ALL` events must match.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AssertRule {
     pub ident: String, // should be used as Ident

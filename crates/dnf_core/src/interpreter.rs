@@ -1,3 +1,8 @@
+//! Evaluates a parsed [`ProgramAst`] (the canonical utility predicate)
+//! against an event batch. `eval_program` is the entry point; the rest of
+//! this module implements the DNF filter, window/pattern/session and
+//! aggregate-function evaluation it dispatches to.
+
 use crate::ast::{Conjunction, Disjunction, Operator, Pred, Term};
 use crate::epl::{
     AggOperation, PatternRule, ProgramAst, Quantifier, Schema, Session, TimeUnit, TimeWindow,
@@ -11,11 +16,20 @@ use serde::{Deserialize, Serialize};
 
 pub type Env = BTreeMap<String, Term>;
 
+/// One record from the raw batch, already mapped onto its schema's
+/// attribute order (see [`mapping_from_schema`]).
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Event {
     pub data: Vec<Term>,
 }
 
+/// Evaluates `p` against `input` and returns whether the batch satisfies
+/// the encoded utility predicate.
+///
+/// A `ProgramAst` mixes independent, optional DSL constructs (assert
+/// rules, pattern, window, aggregate, session); the `has_*` flags below
+/// select which combination of their individual results decides the
+/// final boolean, since not every combination is currently supported.
 pub fn eval_program(p: &ProgramAst, input: &Vec<Event>) -> bool {
     let has_assrt: bool = !&p.assert_rules.is_empty();
     let has_patt: bool = !(p.pattern_rule == None);
@@ -487,6 +501,9 @@ pub fn type_input(e: Event, s: &Schema) -> BTreeMap<String, Term> {
     return data_args;
 }
 
+/// Maps each schema attribute name to its positional index in
+/// `Event::data`, so a `Term::Ident` in a predicate can be resolved back
+/// to the value at that position (see [`resolve_term`]).
 pub fn mapping_from_schema(s: &Schema) -> BTreeMap<String, usize> {
     let mut mapping: BTreeMap<String, usize> = BTreeMap::new();
     let mut counter = 0;
