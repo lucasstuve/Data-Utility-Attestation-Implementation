@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Lower segment size to reduce CUDA prover peak memory usage.
+export RISC0_SEGMENT_LIMIT_PO2="${RISC0_SEGMENT_LIMIT_PO2:-19}"
 
 echo "Start 1st benchmark: filter-benchmark.sh"
 bash filter-benchmark.sh || echo "1: failed"
