@@ -6,10 +6,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+
 DATA_SETS=("test-data-10-MB.json" "test-data-100MB.json" "test-data-1000-MB.json" "vw-batch.json" )
 
 cd "$PROJECT_ROOT"
 export RISC0_DEV_MODE=0
+export RISC0_SEGMENT_LIMIT_PO2="${RISC0_SEGMENT_LIMIT_PO2:-19}"
 
 echo -e "\e[1mGenerating benchmark test data...\e[0m"
 cargo run -p benchmarks --release
