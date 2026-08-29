@@ -1,3 +1,8 @@
+//! Extracts [`Event`]s from raw batch bytes without a full JSON parse:
+//! `efficient_event_extraction` scans directly for each schema attribute's
+//! name and reads the quoted value that follows it. This trades JSON
+//! robustness for avoiding a general-purpose parser in the zkVM guest.
+
 use crate::ast::Term;
 use crate::epl::{Itype, Schema};
 use crate::interpreter::Event;
@@ -6,6 +11,8 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 
+/// Slices out one event's raw bytes as a `str`, using a range validated
+/// beforehand by [`crate::index_list_validator::check_list`].
 pub fn grap_event_string<'a>(indexes: (u32, u32), bytes: &'a [u8]) -> &'a str {
     let (s, e) = indexes;
     let s_usize: usize = s as usize;
@@ -13,11 +20,19 @@ pub fn grap_event_string<'a>(indexes: (u32, u32), bytes: &'a [u8]) -> &'a str {
     core::str::from_utf8(&bytes[s_usize..e_usize]).unwrap()
 }
 
+/// Finds each schema attribute by name in `raw_event` and reads the quoted
+/// value that follows it, in schema-declared order. Assumes a flat JSON
+/// object where every value is written as a quoted string field
+/// (`"ident":"value"`), regardless of its declared [`Itype`]. Returns
+/// `None` if any attribute's value fails its type-specific sanity check
+/// below, rather than a partially-populated `Event`.
 pub fn efficient_event_extraction(schema: Schema, raw_event: &[u8]) -> Option<Event> {
     let attributes = schema.clone().attribute_list.list;
     let mut e_data = Vec::new();
 
     for a in attributes {
+        // +3 skips the `":"` (closing quote, colon, opening quote) between
+        // the matched attribute name and the start of its value.
         let start = &raw_event
             .windows(a.ident.len())
             .position(|w| w == a.ident.as_bytes())
@@ -83,6 +98,7 @@ pub fn valid_schema_types<'a>(s: &'a Schema) -> Vec<&'a str> {
 
 // event String: "{"key":"4b26efad-ee19-305a-add0-a7a422d4e719","dataFieldName":"profiles.targetSOCPercentage","value":"30","timestampUtc":"2025-12-18T16:45:03.484Z"}"
 
+/// Parses a raw value slice into a [`Term`] of the given declared type.
 pub fn bytes_to_term(itype: Itype, b: &[u8]) -> Term {
     let s = core::str::from_utf8(&b).unwrap();
 

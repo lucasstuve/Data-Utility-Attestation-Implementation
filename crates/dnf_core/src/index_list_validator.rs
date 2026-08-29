@@ -1,7 +1,15 @@
+//! Validates the host-supplied `index_list` of `(start, end)` byte ranges
+//! used to slice individual events out of the raw batch. Since this list
+//! comes from the (untrusted) host, the guest must confirm it actually
+//! covers the batch once, in order, with no gaps, overlaps or duplicates
+//! before trusting the events extracted from it.
+
 extern crate alloc;
 use alloc::string::String;
 use alloc::vec::Vec;
 
+/// True iff `list`, once sorted, forms a contiguous, non-overlapping,
+/// duplicate-free cover of the batch (see the module docs above).
 pub fn check_list(mut list: Vec<(u32, u32)>) -> bool {
     let mut l_accumulator: u32 = 0;
     list.sort_unstable();
@@ -12,6 +20,10 @@ pub fn check_list(mut list: Vec<(u32, u32)>) -> bool {
     l_accumulator += pair_length(previous_pair.0, previous_pair.1);
 
     let expected_length = expected_length(&list);
+    // Each event boundary consumes roughly one delimiter byte (e.g. a
+    // comma) that isn't part of any (start, end) range itself, so the
+    // summed range lengths fall short of the raw span by about one byte
+    // per event; this budgets for that without parsing the delimiters.
     let approximate_delimiter_shift: u32 = list.len() as u32;
     let mut has_doubles: bool = false;
     let mut overlaps: bool = false;

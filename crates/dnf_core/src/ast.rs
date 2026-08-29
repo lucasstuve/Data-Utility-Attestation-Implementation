@@ -1,11 +1,16 @@
 // crates/dnf_core/src/ast.rs
 
+//! Core term/predicate types matched by `dnf.pest`: a [`Disjunction`] of
+//! [`Conjunction`]s of [`Pred`]s in disjunctive normal form (DNF), plus the
+//! [`Term`] values and [`Operator`]s a predicate compares.
+
 use core::fmt;
 
 extern crate alloc;
 use alloc::{string::String, vec::Vec};
 use serde::{Deserialize, Serialize};
 
+/// Comparison operator on the two sides of a [`Pred`].
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Operator {
     Eq,
@@ -29,6 +34,8 @@ impl fmt::Display for Operator {
     }
 }
 
+/// A literal value, a schema-attribute reference (`Ident`), or an aggregate
+/// expression, evaluated against a single [`crate::interpreter::Event`].
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Term {
     Int(i64),
@@ -62,11 +69,13 @@ impl Term {
     }
 }
 
+/// AND-ed group of predicates; true iff every [`Pred`] in `preds` is true.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Conjunction {
     pub preds: Vec<Pred>,
 }
 
+/// A single `lhs op rhs` comparison, e.g. `value > 20.0`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Pred {
     pub lhs: Term,
@@ -74,6 +83,8 @@ pub struct Pred {
     pub rhs: Term,
 }
 
+/// OR-ed group of conjunctions (the "D" in DNF); true iff any [`Conjunction`]
+/// in `conj` is true.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Disjunction {
     pub conj: Vec<Conjunction>,

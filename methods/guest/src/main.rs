@@ -1,3 +1,10 @@
+//! The RISC Zero zkVM guest program (`eval_ast`) exercised by these
+//! benchmarks: re-derives events from the raw batch, verifies the
+//! Manufacturer's signature, and evaluates the DSL predicate over them —
+//! the same private computation as on `end-to-end-system`, but only the
+//! event count is committed to the journal here, since these benchmarks
+//! measure proving cost rather than the full attestation output.
+
 #![no_main]
 extern crate alloc;
 
@@ -23,6 +30,10 @@ use serde::{Deserialize, Serialize};
 
 risc0_zkvm::guest::entry!(main);
 
+/// Mirrors the `end-to-end-system` branch's guest journal shape for
+/// parity; on this branch only `number_of_events` is actually committed
+/// below (see `main`), so `evaluation_result`/`logic_commitment`/
+/// `signature` here are currently unused.
 #[derive(Serialize, Deserialize)]
 pub struct Journal {
     pub evaluation_result: bool,
